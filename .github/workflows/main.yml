@@ -21,11 +21,11 @@ jobs:
 
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }} && rustup target add wasm32-unknown-unknown
 
-      - name: Build clear-contract-deployer
-        run: cargo build --target wasm32-unknown-unknown --release -p clear-contract-deployer
-
       - name: Build clear-contract
         run: cargo build --target wasm32-unknown-unknown --release -p clear-contract
+
+      - name: Build clear-contract-deployer
+        run: cargo build --target wasm32-unknown-unknown --release -p clear-contract-deployer
   
       - name: Run tests
         run: cargo test --verbose
