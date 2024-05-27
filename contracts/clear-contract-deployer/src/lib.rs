@@ -33,3 +33,5 @@ impl ClearContractDeployer {
         (deployed_address, contract)
     }
 }
+
+mod test;
