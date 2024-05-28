@@ -5,8 +5,8 @@ set -e
 NETWORK="$1"
 
 WASM_PATH="target/wasm32-unknown-unknown/release/"
-CLEAR_WASM=$WASM_PATH"clear_contract"
-DEPLOYER_WASM=$WASM_PATH"clear_contract_deployer"
+CLEAR_WASM=$WASM_PATH"liquidity_pool"
+DEPLOYER_WASM=$WASM_PATH"liquidity_pool_deployer"
 TOKEN_NATIVE_ID="CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
 
 case "$1" in
@@ -53,12 +53,12 @@ echo "Admin Secret key: $CLEAR_ADMIN_SECRET"
 
 ARGS="--network $NETWORK --source-account clear-admin"
 
-echo Build and optimize clear-contract
-cargo build --target wasm32-unknown-unknown --release -p clear-contract
+echo Build and optimize liquidity-pool
+cargo build --target wasm32-unknown-unknown --release -p liquidity-pool
 soroban contract optimize --wasm $CLEAR_WASM".wasm"
 
-echo Build and optimize clear-contract-deployer
-cargo build --target wasm32-unknown-unknown --release -p clear-contract-deployer
+echo Build and optimize liquidity-pool-deployer
+cargo build --target wasm32-unknown-unknown --release -p liquidity-pool-deployer
 soroban contract optimize --wasm $DEPLOYER_WASM".wasm"
 
 echo Deploy the clear contract deployer

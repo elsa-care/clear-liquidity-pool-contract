@@ -2,7 +2,7 @@
 extern crate alloc;
 extern crate std;
 
-use crate::{clear_contract, ClearContractDeployer, ClearContractDeployerClient};
+use crate::{liquidity_pool, LiquidityPoolDeployer, LiquidityPoolDeployerClient};
 use soroban_sdk::{
     testutils::Address as _,
     token::{self},
@@ -24,7 +24,7 @@ fn create_token_contract<'a>(
 fn test_deploy_from_contract() {
     let env = Env::default();
     let deployer_client =
-        ClearContractDeployerClient::new(&env, &env.register_contract(None, ClearContractDeployer));
+        LiquidityPoolDeployerClient::new(&env, &env.register_contract(None, LiquidityPoolDeployer));
 
     let salt = BytesN::from_array(&env, &[0; 32]);
     let admin = Address::generate(&env);
@@ -35,7 +35,7 @@ fn test_deploy_from_contract() {
     env.mock_all_auths();
     let (contract_id, _contract) = deployer_client.deploy(&admin, &salt, &token.address);
 
-    let client = clear_contract::Client::new(&env, &contract_id);
+    let client = liquidity_pool::Client::new(&env, &contract_id);
     let total_balance = client.get_total_balance();
     assert_eq!(total_balance, 0i128);
 }

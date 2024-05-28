@@ -7,10 +7,10 @@ use crate::types::DataKey;
 use soroban_sdk::{contract, contractimpl, Address, Env};
 
 #[contract]
-pub struct ClearContract;
+pub struct LiquidityPoolContract;
 
 #[contractimpl]
-impl ClearContract {
+impl LiquidityPoolContract {
     pub fn initialize(env: Env, admin: Address, token: Address) {
         assert!(
             !env.storage().persistent().has(&DataKey::Admin),
@@ -26,7 +26,7 @@ impl ClearContract {
             .set(&DataKey::TotalBalance, &0i128);
     }
 
-    pub fn get_total_balance(env: &Env) -> i128 {
+    pub fn get_total_balance(env: Env) -> i128 {
         env.storage()
             .persistent()
             .get::<_, i128>(&DataKey::TotalBalance)

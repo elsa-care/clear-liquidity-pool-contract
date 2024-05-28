@@ -7,7 +7,7 @@ use soroban_sdk::{testutils::Address as _, Address, Env};
 fn test_initialize() {
     let setup = Setup::new();
 
-    let total_balance = setup.clear_contract.client().get_total_balance();
+    let total_balance = setup.liquid_contract.client().get_total_balance();
 
     assert_eq!(total_balance, 0i128);
 }
@@ -23,7 +23,7 @@ fn test_already_initialize() {
     let (token, _token_client) = create_token_contract(&env, &token_admin);
 
     setup
-        .clear_contract
+        .liquid_contract
         .client()
         .initialize(&admin, &token.address);
 }
