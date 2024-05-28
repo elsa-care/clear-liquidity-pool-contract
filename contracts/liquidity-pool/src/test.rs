@@ -27,3 +27,55 @@ fn test_already_initialize() {
         .client()
         .initialize(&admin, &token.address);
 }
+
+#[test]
+fn test_add_borrower() {
+    let setup = Setup::new();
+
+    let borrower = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&setup.admin, &borrower);
+}
+
+#[test]
+#[should_panic(expected = "only the stored admin can add borrowers")]
+fn test_add_borrower_with_fake_admin() {
+    let setup = Setup::new();
+
+    let fake_admin = Address::generate(&setup.env);
+    let borrower = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&fake_admin, &borrower);
+}
+
+#[test]
+fn test_remove_borrower() {
+    let setup = Setup::new();
+
+    let borrower = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .remove_borrower(&setup.admin, &borrower);
+}
+
+#[test]
+#[should_panic(expected = "only the stored admin can add borrowers")]
+fn test_remove_borrower_with_fake_admin() {
+    let setup = Setup::new();
+
+    let fake_admin = Address::generate(&setup.env);
+    let borrower = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .remove_borrower(&fake_admin, &borrower);
+}
