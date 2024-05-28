@@ -1,6 +1,19 @@
-[package]
-name = "clear-liquidity-pool-contract"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+resolver = "2"
+members = [
+    "contracts/*",
+]
 
-[dependencies]
+[workspace.dependencies]
+soroban-sdk = "21.0.1-preview.3"
+soroban-token-sdk = "21.0.1-preview.3"
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+debug-assertions = false
+strip = "symbols"
+panic = "abort"
+codegen-units = 1
+lto = true
