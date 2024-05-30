@@ -6,6 +6,13 @@ pub fn get_admin(env: &Env) -> Address {
     env.storage().persistent().get(&DataKey::Admin).unwrap()
 }
 
+pub fn get_all_borrowers(env: &Env) -> Vec<Address> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Borrowers)
+        .unwrap_or(Vec::new(&env))
+}
+
 pub fn get_all_lenders(env: &Env) -> Vec<Address> {
     env.storage()
         .persistent()

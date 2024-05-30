@@ -8,4 +8,8 @@ pub trait LiquidityPoolTrait {
     fn add_lender(env: Env, admin: Address, lender: Address);
 
     fn remove_lender(env: Env, admin: Address, lender: Address);
+
+    fn add_borrower(env: Env, admin: Address, borrower: Address);
+
+    fn remove_borrower(env: Env, admin: Address, lender: Address);
 }
