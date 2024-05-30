@@ -7,4 +7,5 @@ pub enum DataKey {
     Token,
     Admin,
     Borrowers,
+    Lenders,
 }

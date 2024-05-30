@@ -12,3 +12,10 @@ pub fn get_all_borrowers(env: &Env) -> Vec<Address> {
         .get(&DataKey::Borrowers)
         .unwrap_or(Vec::new(&env))
 }
+
+pub fn get_all_lenders(env: &Env) -> Vec<Address> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Lenders)
+        .unwrap_or(Vec::new(&env))
+}

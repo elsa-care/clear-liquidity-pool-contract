@@ -7,7 +7,7 @@ mod types;
 
 use crate::{
     interface::LiquidityPoolTrait,
-    storage::{get_admin, get_all_borrowers},
+    storage::{get_admin, get_all_borrowers, get_all_lenders},
     types::DataKey,
 };
 use soroban_sdk::{contract, contractimpl, Address, Env};
@@ -71,6 +71,36 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         env.storage()
             .persistent()
             .set(&DataKey::Borrowers, &borrowers);
+     }
+
+    fn add_lender(env: Env, admin: Address, lender: Address) {
+        assert_eq!(
+            get_admin(&env),
+            admin,
+            "only the stored admin can add lenders"
+        );
+
+        let mut lenders = get_all_lenders(&env);
+
+        lenders.push_back(lender);
+
+        env.storage().persistent().set(&DataKey::Lenders, &lenders);
+    }
+
+    fn remove_lender(env: Env, admin: Address, lender: Address) {
+        assert_eq!(
+            get_admin(&env),
+            admin,
+            "only the stored admin can add lenders"
+        );
+
+        let mut lenders = get_all_lenders(&env);
+
+        if let Some(index) = lenders.iter().position(|address| address == lender) {
+            lenders.remove(index as u32);
+        }
+
+        env.storage().persistent().set(&DataKey::Lenders, &lenders);
     }
 }
 
