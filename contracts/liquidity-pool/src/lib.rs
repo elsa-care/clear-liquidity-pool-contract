@@ -5,11 +5,13 @@ mod storage;
 mod testutils;
 mod types;
 
-use crate::{
-    interface::LiquidityPoolTrait,
-    storage::{get_admin, get_all_borrowers, get_all_lenders},
-    types::DataKey,
+use crate::interface::LiquidityPoolTrait;
+use crate::storage::{
+    get_all_borrowers, has_admin, has_lender, read_admin, read_contract_balance, remove_lender,
+    write_admin, write_contract_balance, write_lender, write_token,
 };
+use crate::types::DataKey;
+
 use soroban_sdk::{contract, contractimpl, Address, Env};
 
 #[contract]
@@ -19,29 +21,22 @@ pub struct LiquidityPoolContract;
 impl LiquidityPoolTrait for LiquidityPoolContract {
     fn initialize(env: Env, admin: Address, token: Address) {
         assert!(
-            !env.storage().persistent().has(&DataKey::Admin),
+            !has_admin(&env),
             "contract already initialized with an admin"
         );
 
-        env.storage().persistent().set(&DataKey::Admin, &admin);
-
-        env.storage().persistent().set(&DataKey::Token, &token);
-
-        env.storage()
-            .persistent()
-            .set(&DataKey::TotalBalance, &0i128);
+        write_admin(&env, &admin);
+        write_token(&env, &token);
+        write_contract_balance(&env, &0i128);
     }
 
     fn get_total_balance(env: Env) -> i128 {
-        env.storage()
-            .persistent()
-            .get::<_, i128>(&DataKey::TotalBalance)
-            .unwrap_or(0)
+        read_contract_balance(&env)
     }
 
     fn add_borrower(env: Env, admin: Address, borrower: Address) {
         assert_eq!(
-            get_admin(&env),
+            read_admin(&env),
             admin,
             "only the stored admin can add borrowers"
         );
@@ -57,7 +52,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
     fn remove_borrower(env: Env, admin: Address, borrower: Address) {
         assert_eq!(
-            get_admin(&env),
+            read_admin(&env),
             admin,
             "only the stored admin can add borrowers"
         );
@@ -71,36 +66,28 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         env.storage()
             .persistent()
             .set(&DataKey::Borrowers, &borrowers);
-     }
+    }
 
     fn add_lender(env: Env, admin: Address, lender: Address) {
         assert_eq!(
-            get_admin(&env),
+            read_admin(&env),
             admin,
             "only the stored admin can add lenders"
         );
+        assert!(!has_lender(&env, &lender), "lender is already registered");
 
-        let mut lenders = get_all_lenders(&env);
-
-        lenders.push_back(lender);
-
-        env.storage().persistent().set(&DataKey::Lenders, &lenders);
+        write_lender(&env, &lender, &0i128);
     }
 
     fn remove_lender(env: Env, admin: Address, lender: Address) {
         assert_eq!(
-            get_admin(&env),
+            read_admin(&env),
             admin,
             "only the stored admin can add lenders"
         );
+        assert!(has_lender(&env, &lender), "lender is not registered");
 
-        let mut lenders = get_all_lenders(&env);
-
-        if let Some(index) = lenders.iter().position(|address| address == lender) {
-            lenders.remove(index as u32);
-        }
-
-        env.storage().persistent().set(&DataKey::Lenders, &lenders);
+        remove_lender(&env, &lender);
     }
 }
 
