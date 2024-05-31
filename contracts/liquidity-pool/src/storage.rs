@@ -30,6 +30,13 @@ pub fn read_contract_balance(env: &Env) -> i128 {
         .unwrap_or(0)
 }
 
+pub fn read_lender(env: &Env, lender: &Address) -> i128 {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Lender(lender.clone()))
+        .unwrap_or(0)
+}
+
 pub fn read_token(env: &Env) -> Address {
     env.storage().persistent().get(&DataKey::Token).unwrap()
 }
