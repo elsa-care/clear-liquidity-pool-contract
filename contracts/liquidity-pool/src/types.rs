@@ -1,11 +1,11 @@
-use soroban_sdk::contracttype;
+use soroban_sdk::{contracttype, Address};
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 #[contracttype]
 pub enum DataKey {
     TotalBalance,
     Token,
     Admin,
     Borrowers,
-    Lenders,
+    Lender(Address),
 }
