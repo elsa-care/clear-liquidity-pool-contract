@@ -10,6 +10,8 @@ fn test_initialize() {
     let total_balance = setup.liquid_contract.client().get_total_balance();
 
     assert_eq!(total_balance, 0i128);
+    assert_eq!(setup.liquid_contract.read_admin(), setup.admin);
+    assert_eq!(setup.liquid_contract.read_token(), setup.token.address);
 }
 
 #[test]
@@ -90,6 +92,8 @@ fn test_add_lender() {
         .liquid_contract
         .client()
         .add_lender(&setup.admin, &lender);
+
+    assert!(setup.liquid_contract.has_lender(&lender));
 }
 
 #[test]
@@ -117,10 +121,14 @@ fn test_remove_lender() {
         .client()
         .add_lender(&setup.admin, &lender);
 
+    assert!(setup.liquid_contract.has_lender(&lender));
+
     setup
         .liquid_contract
         .client()
         .remove_lender(&setup.admin, &lender);
+
+    assert!(!setup.liquid_contract.has_lender(&lender));
 }
 
 #[test]
