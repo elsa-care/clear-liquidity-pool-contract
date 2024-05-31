@@ -115,6 +115,11 @@ fn test_remove_lender() {
     setup
         .liquid_contract
         .client()
+        .add_lender(&setup.admin, &lender);
+
+    setup
+        .liquid_contract
+        .client()
         .remove_lender(&setup.admin, &lender);
 }
 
@@ -130,4 +135,17 @@ fn test_remove_lender_with_fake_admin() {
         .liquid_contract
         .client()
         .remove_lender(&fake_admin, &lender);
+}
+
+#[test]
+#[should_panic(expected = "lender is not registered")]
+fn test_remove_without_lender() {
+    let setup = Setup::new();
+
+    let lender = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .remove_lender(&setup.admin, &lender);
 }
