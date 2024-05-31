@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use crate::storage::{has_lender, read_admin, read_token};
 use crate::LiquidityPoolContractClient;
 use soroban_sdk::{
     testutils::Address as _,
@@ -81,5 +82,20 @@ impl LiquidityPoolContract {
             env: env.clone(),
             contract_id,
         }
+    }
+
+    pub fn read_admin(&self) -> Address {
+        self.env
+            .as_contract(&self.contract_id, || read_admin(&self.env))
+    }
+
+    pub fn has_lender(&self, lender: &Address) -> bool {
+        self.env
+            .as_contract(&self.contract_id, || has_lender(&self.env, &lender))
+    }
+
+    pub fn read_token(&self) -> Address {
+        self.env
+            .as_contract(&self.contract_id, || read_token(&self.env))
     }
 }
