@@ -7,12 +7,28 @@ mod types;
 
 use crate::interface::LiquidityPoolTrait;
 use crate::storage::{
-    get_all_borrowers, has_admin, has_lender, read_admin, read_contract_balance, remove_lender,
-    write_admin, write_contract_balance, write_lender, write_token,
+    get_all_borrowers, has_admin, has_lender, read_admin, read_contract_balance, read_lender,
+    read_token, remove_lender, write_admin, write_contract_balance, write_lender, write_token,
 };
 use crate::types::DataKey;
 
-use soroban_sdk::{contract, contractimpl, Address, Env};
+use soroban_sdk::{
+    contract, contractimpl,
+    token::{self},
+    Address, Env,
+};
+
+fn transfer_from_contract_to_account(env: &Env, from: &Address, to: &Address, amount: &i128) {
+    let token_id = read_token(&env);
+    let token = token::Client::new(&env, &token_id);
+    token.transfer(&from, &to, &amount);
+}
+
+fn transfer_from_account_to_contract(env: &Env, from: &Address, to: &Address, amount: &i128) {
+    let token_id = read_token(&env);
+    let token = token::Client::new(&env, &token_id);
+    token.transfer(&from, &to, &amount);
+}
 
 #[contract]
 pub struct LiquidityPoolContract;
@@ -30,8 +46,52 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_contract_balance(&env, &0i128);
     }
 
-    fn get_total_balance(env: Env) -> i128 {
-        read_contract_balance(&env)
+    fn balance(env: Env, address: Address) -> i128 {
+        if address == read_admin(&env) {
+            return read_contract_balance(&env);
+        };
+
+        if has_lender(&env, &address) {
+            return read_lender(&env, &address);
+        }
+
+        panic!("address is not registered");
+    }
+
+    fn deposit(env: Env, lender: Address, amount: i128) {
+        lender.require_auth();
+
+        assert!(has_lender(&env, &lender), "lender is not registered");
+        assert!(amount > 0, "amount must be positive");
+
+        transfer_from_account_to_contract(&env, &lender, &env.current_contract_address(), &amount);
+
+        let total_balance = read_contract_balance(&env);
+        let lender_balance = read_lender(&env, &lender);
+
+        write_contract_balance(&env, &(total_balance + amount));
+        write_lender(&env, &lender, &(lender_balance + amount));
+    }
+
+    fn withdraw(env: Env, lender: Address, amount: i128) {
+        lender.require_auth();
+
+        assert!(has_lender(&env, &lender), "lender is not registered");
+
+        let total_balance = read_contract_balance(&env);
+        let lender_balance = read_lender(&env, &lender);
+
+        assert!(amount > 0, "amount must be positive");
+        assert!(
+            lender_balance >= amount,
+            "balance not available for the amount requested"
+        );
+        assert!(total_balance >= amount, "balance currently unavailable");
+
+        transfer_from_contract_to_account(&env, &env.current_contract_address(), &lender, &amount);
+
+        write_contract_balance(&env, &(total_balance - amount));
+        write_lender(&env, &lender, &(lender_balance - amount));
     }
 
     fn add_borrower(env: Env, admin: Address, borrower: Address) {
