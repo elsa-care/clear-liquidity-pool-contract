@@ -18,13 +18,7 @@ use soroban_sdk::{
     Address, Env,
 };
 
-fn transfer_from_contract_to_account(env: &Env, from: &Address, to: &Address, amount: &i128) {
-    let token_id = read_token(&env);
-    let token = token::Client::new(&env, &token_id);
-    token.transfer(&from, &to, &amount);
-}
-
-fn transfer_from_account_to_contract(env: &Env, from: &Address, to: &Address, amount: &i128) {
+fn token_transfer(env: &Env, from: &Address, to: &Address, amount: &i128) {
     let token_id = read_token(&env);
     let token = token::Client::new(&env, &token_id);
     token.transfer(&from, &to, &amount);
@@ -64,7 +58,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         assert!(has_lender(&env, &lender), "lender is not registered");
         assert!(amount > 0, "amount must be positive");
 
-        transfer_from_account_to_contract(&env, &lender, &env.current_contract_address(), &amount);
+        token_transfer(&env, &lender, &env.current_contract_address(), &amount);
 
         let total_balance = read_contract_balance(&env);
         let lender_balance = read_lender(&env, &lender);
@@ -88,7 +82,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         );
         assert!(total_balance >= amount, "balance currently unavailable");
 
-        transfer_from_contract_to_account(&env, &env.current_contract_address(), &lender, &amount);
+        token_transfer(&env, &env.current_contract_address(), &lender, &amount);
 
         write_contract_balance(&env, &(total_balance - amount));
         write_lender(&env, &lender, &(lender_balance - amount));
