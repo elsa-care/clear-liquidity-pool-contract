@@ -54,7 +54,7 @@ fn test_balance_with_lender() {
 
 #[test]
 #[should_panic(expected = "address is not registered")]
-fn test_balance_witout_registered_address() {
+fn test_balance_without_registered_address() {
     let setup = Setup::new();
 
     let unregistered_address = Address::generate(&setup.env);
@@ -227,7 +227,7 @@ fn test_withdraw_negative_amount() {
 
 #[test]
 #[should_panic(expected = "balance not available for the amount requested")]
-fn test_withdraw_amount_greather_lender_balance() {
+fn test_withdraw_amount_greater_lender_balance() {
     let setup = Setup::new();
     let lender = Address::generate(&setup.env);
 
