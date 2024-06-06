@@ -1,10 +1,10 @@
 #![cfg(test)]
 
-use crate::storage::{has_lender, read_admin, read_token};
+use crate::storage::{has_lender, read_admin, read_contract_balance, read_lender, read_token};
 use crate::LiquidityPoolContractClient;
 use soroban_sdk::{
     testutils::Address as _,
-    token::{self},
+    token::{self, StellarAssetClient},
     Address, Env,
 };
 
@@ -40,6 +40,7 @@ pub struct Setup<'a> {
     pub env: Env,
     pub admin: Address,
     pub token: token::Client<'a>,
+    pub token_admin: StellarAssetClient<'a>,
     pub liquid_contract: LiquidityPoolContract,
     pub liquid_contract_id: Address,
 }
@@ -55,7 +56,7 @@ impl Setup<'_> {
         let admin = Address::generate(&env);
         let token_admin = Address::generate(&env);
 
-        let (token, _token_client) = create_token_contract(&env, &token_admin);
+        let (token, token_admin) = create_token_contract(&env, &token_admin);
 
         let (liquid_contract_id, liquid_contract) =
             create_test_contract(&env, &admin, &token.address);
@@ -64,6 +65,7 @@ impl Setup<'_> {
             env,
             admin,
             token,
+            token_admin,
             liquid_contract,
             liquid_contract_id,
         }
@@ -97,5 +99,15 @@ impl LiquidityPoolContract {
     pub fn read_token(&self) -> Address {
         self.env
             .as_contract(&self.contract_id, || read_token(&self.env))
+    }
+
+    pub fn read_contract_balance(&self) -> i128 {
+        self.env
+            .as_contract(&self.contract_id, || read_contract_balance(&self.env))
+    }
+
+    pub fn read_lender(&self, lender: &Address) -> i128 {
+        self.env
+            .as_contract(&self.contract_id, || read_lender(&self.env, &lender))
     }
 }

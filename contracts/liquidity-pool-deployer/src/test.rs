@@ -36,6 +36,6 @@ fn test_deploy_from_contract() {
     let (contract_id, _contract) = deployer_client.deploy(&admin, &salt, &token.address);
 
     let client = liquidity_pool::Client::new(&env, &contract_id);
-    let total_balance = client.get_total_balance();
+    let total_balance = client.balance(&admin);
     assert_eq!(total_balance, 0i128);
 }
