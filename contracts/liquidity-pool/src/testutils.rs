@@ -1,6 +1,9 @@
 #![cfg(test)]
 
-use crate::storage::{has_lender, read_admin, read_contract_balance, read_lender, read_token};
+use crate::storage::{
+    has_lender, read_admin, read_contract_balance, read_lender, read_lender_contribution,
+    read_token,
+};
 use crate::LiquidityPoolContractClient;
 use soroban_sdk::{
     testutils::Address as _,
@@ -109,5 +112,11 @@ impl LiquidityPoolContract {
     pub fn read_lender(&self, lender: &Address) -> i128 {
         self.env
             .as_contract(&self.contract_id, || read_lender(&self.env, &lender))
+    }
+
+    pub fn read_lender_contribution(&self, lender: &Address) -> i64 {
+        self.env.as_contract(&self.contract_id, || {
+            read_lender_contribution(&self.env, &lender)
+        })
     }
 }
