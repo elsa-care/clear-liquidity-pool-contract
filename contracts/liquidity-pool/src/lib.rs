@@ -1,14 +1,17 @@
 #![no_std]
 
 mod interface;
+mod percentage;
 mod storage;
 mod testutils;
 mod types;
 
 use crate::interface::LiquidityPoolTrait;
+use crate::percentage::process_lender_contribution;
 use crate::storage::{
-    get_all_borrowers, has_admin, has_lender, read_admin, read_contract_balance, read_lender,
-    read_token, remove_lender, write_admin, write_contract_balance, write_lender, write_token,
+    get_all_borrowers, has_admin, has_lender, read_admin, read_contract_balance,
+    read_contributions, read_lender, read_token, remove_lender, remove_lender_contribution,
+    write_admin, write_contract_balance, write_lender, write_lender_contribution, write_token,
 };
 use crate::types::DataKey;
 
@@ -60,11 +63,27 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         token_transfer(&env, &lender, &env.current_contract_address(), &amount);
 
-        let total_balance = read_contract_balance(&env);
-        let lender_balance = read_lender(&env, &lender);
+        let mut total_balance = read_contract_balance(&env);
+        let mut lender_balance = read_lender(&env, &lender);
 
-        write_contract_balance(&env, &(total_balance + amount));
-        write_lender(&env, &lender, &(lender_balance + amount));
+        total_balance += amount;
+        lender_balance += amount;
+
+        write_contract_balance(&env, &total_balance);
+        write_lender(&env, &lender, &lender_balance);
+
+        let mut lender_contribution = read_contributions(&env);
+
+        lender_contribution = process_lender_contribution(
+            0,
+            &lender,
+            lender_contribution,
+            &lender_balance,
+            &total_balance,
+            &(total_balance - amount),
+        );
+
+        write_lender_contribution(&env, lender_contribution);
     }
 
     fn withdraw(env: Env, lender: Address, amount: i128) {
@@ -72,8 +91,8 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         assert!(has_lender(&env, &lender), "lender is not registered");
 
-        let total_balance = read_contract_balance(&env);
-        let lender_balance = read_lender(&env, &lender);
+        let mut total_balance = read_contract_balance(&env);
+        let mut lender_balance = read_lender(&env, &lender);
 
         assert!(amount > 0, "amount must be positive");
         assert!(
@@ -84,8 +103,28 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         token_transfer(&env, &env.current_contract_address(), &lender, &amount);
 
-        write_contract_balance(&env, &(total_balance - amount));
-        write_lender(&env, &lender, &(lender_balance - amount));
+        total_balance -= amount;
+        lender_balance -= amount;
+
+        write_contract_balance(&env, &total_balance);
+        write_lender(&env, &lender, &lender_balance);
+
+        let mut lender_contribution = read_contributions(&env);
+
+        if lender_balance > 0 {
+            lender_contribution = process_lender_contribution(
+                1,
+                &lender,
+                lender_contribution,
+                &lender_balance,
+                &total_balance,
+                &(total_balance + amount),
+            );
+        } else {
+            lender_contribution.remove(lender.clone());
+        }
+
+        write_lender_contribution(&env, lender_contribution);
     }
 
     fn add_borrower(env: Env, admin: Address, borrower: Address) {
@@ -142,6 +181,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         assert!(has_lender(&env, &lender), "lender is not registered");
 
         remove_lender(&env, &lender);
+        remove_lender_contribution(&env, &lender);
     }
 }
 
