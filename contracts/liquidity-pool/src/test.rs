@@ -1,7 +1,6 @@
 #![cfg(test)]
 
-use super::percentage::percentage_to_integer;
-use super::testutils::{create_token_contract, Setup};
+use super::testutils::{create_token_contract, percentage_to_integer, Setup};
 use soroban_sdk::{testutils::Address as _, Address, Env};
 
 #[test]
@@ -93,7 +92,7 @@ fn test_deposit() {
 
     assert_eq!(
         setup.liquid_contract.read_lender_contribution(&lender1),
-        percentage_to_integer(100.0)
+        percentage_to_integer(100f64)
     );
 
     setup
@@ -106,12 +105,12 @@ fn test_deposit() {
     assert_eq!(setup.liquid_contract.read_lender(&lender1), 4i128);
     assert_eq!(
         setup.liquid_contract.read_lender_contribution(&lender1),
-        percentage_to_integer(36.3636363)
+        percentage_to_integer(36.363636350)
     );
     assert_eq!(setup.liquid_contract.read_lender(&lender2), 7i128);
     assert_eq!(
         setup.liquid_contract.read_lender_contribution(&lender2),
-        percentage_to_integer(63.6363636)
+        percentage_to_integer(63.636363650)
     );
 }
 
@@ -177,7 +176,7 @@ fn test_withdraw() {
 
     assert_eq!(
         setup.liquid_contract.read_lender_contribution(&lender1),
-        percentage_to_integer(100.0)
+        percentage_to_integer(100f64)
     );
 
     setup
@@ -189,11 +188,11 @@ fn test_withdraw() {
     assert_eq!(setup.liquid_contract.read_contract_balance(), 20i128);
     assert_eq!(
         setup.liquid_contract.read_lender_contribution(&lender1),
-        percentage_to_integer(50.0)
+        percentage_to_integer(50f64)
     );
     assert_eq!(
         setup.liquid_contract.read_lender_contribution(&lender2),
-        percentage_to_integer(50.0)
+        percentage_to_integer(50f64)
     );
 
     setup

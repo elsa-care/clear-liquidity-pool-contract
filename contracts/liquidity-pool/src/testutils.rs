@@ -1,7 +1,9 @@
 #![cfg(test)]
 
+use crate::percentage::ONE_XLM_IN_STROOPS;
 use crate::storage::{
-    has_borrower, has_lender, read_admin, read_contract_balance, read_lender, read_lender_contribution, read_token,
+    has_borrower, has_lender, read_admin, read_contract_balance, read_lender,
+    read_lender_contribution, read_token,
 };
 use crate::LiquidityPoolContractClient;
 use soroban_sdk::{
@@ -9,6 +11,10 @@ use soroban_sdk::{
     token::{self, StellarAssetClient},
     Address, Env,
 };
+
+pub fn percentage_to_integer(percentage: f64) -> i64 {
+    (percentage * ONE_XLM_IN_STROOPS as f64) as i64
+}
 
 pub fn create_test_contract(
     env: &Env,
