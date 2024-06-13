@@ -1,4 +1,4 @@
-use soroban_sdk::{Address, Env, Vec};
+use soroban_sdk::{Address, Env};
 
 use crate::types::DataKey;
 
@@ -10,11 +10,10 @@ pub fn read_admin(env: &Env) -> Address {
     env.storage().persistent().get(&DataKey::Admin).unwrap()
 }
 
-pub fn get_all_borrowers(env: &Env) -> Vec<Address> {
+pub fn has_borrower(env: &Env, borrower: &Address) -> bool {
     env.storage()
         .persistent()
-        .get(&DataKey::Borrowers)
-        .unwrap_or(Vec::new(&env))
+        .has(&DataKey::Borrower(borrower.clone()))
 }
 
 pub fn has_lender(env: &Env, lender: &Address) -> bool {
@@ -41,6 +40,12 @@ pub fn read_token(env: &Env) -> Address {
     env.storage().persistent().get(&DataKey::Token).unwrap()
 }
 
+pub fn remove_borrower(env: &Env, borrower: &Address) {
+    env.storage()
+        .persistent()
+        .remove(&DataKey::Borrower(borrower.clone()))
+}
+
 pub fn remove_lender(env: &Env, lender: &Address) {
     env.storage()
         .persistent()
@@ -49,6 +54,12 @@ pub fn remove_lender(env: &Env, lender: &Address) {
 
 pub fn write_admin(env: &Env, admin: &Address) {
     env.storage().persistent().set(&DataKey::Admin, admin);
+}
+
+pub fn write_borrower(env: &Env, borrower: &Address, is_loaned: bool) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::Borrower(borrower.clone()), &is_loaned);
 }
 
 pub fn write_contract_balance(env: &Env, amount: &i128) {
