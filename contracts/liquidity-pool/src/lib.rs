@@ -9,11 +9,11 @@ mod types;
 use crate::interface::LiquidityPoolTrait;
 use crate::percentage::process_lender_contribution;
 use crate::storage::{
-    get_all_borrowers, has_admin, has_lender, read_admin, read_contract_balance,
-    read_contributions, read_lender, read_token, remove_lender, remove_lender_contribution,
-    write_admin, write_contract_balance, write_lender, write_lender_contribution, write_token,
+    has_admin, has_borrower, has_lender, read_admin, read_contract_balance, read_lender,
+    read_contributions, read_token, remove_borrower, remove_lender, remove_lender_contribution, 
+    write_admin, write_borrower, write_contract_balance, write_lender, write_lender_contribution,
+    write_token,
 };
-use crate::types::DataKey;
 
 use soroban_sdk::{
     contract, contractimpl,
@@ -134,13 +134,12 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             "only the stored admin can add borrowers"
         );
 
-        let mut borrowers = get_all_borrowers(&env);
+        assert!(
+            !has_borrower(&env, &borrower),
+            "borrower is already registered"
+        );
 
-        borrowers.push_back(borrower);
-
-        env.storage()
-            .persistent()
-            .set(&DataKey::Borrowers, &borrowers);
+        write_borrower(&env, &borrower, false);
     }
 
     fn remove_borrower(env: Env, admin: Address, borrower: Address) {
@@ -150,15 +149,9 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             "only the stored admin can add borrowers"
         );
 
-        let mut borrowers = get_all_borrowers(&env);
+        assert!(has_borrower(&env, &borrower), "borrower is not registered");
 
-        if let Some(index) = borrowers.iter().position(|address| address == borrower) {
-            borrowers.remove(index as u32);
-        }
-
-        env.storage()
-            .persistent()
-            .set(&DataKey::Borrowers, &borrowers);
+        remove_borrower(&env, &borrower);
     }
 
     fn add_lender(env: Env, admin: Address, lender: Address) {

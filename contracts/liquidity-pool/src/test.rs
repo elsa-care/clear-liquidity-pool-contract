@@ -296,6 +296,8 @@ fn test_add_borrower() {
         .liquid_contract
         .client()
         .add_borrower(&setup.admin, &borrower);
+
+    assert!(setup.liquid_contract.has_borrower(&borrower));
 }
 
 #[test]
@@ -313,7 +315,47 @@ fn test_add_borrower_with_fake_admin() {
 }
 
 #[test]
+#[should_panic(expected = "borrower is already registered")]
+fn test_add_registered_borrower() {
+    let setup = Setup::new();
+
+    let borrower = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&setup.admin, &borrower);
+
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&setup.admin, &borrower);
+}
+
+#[test]
 fn test_remove_borrower() {
+    let setup = Setup::new();
+
+    let borrower = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&setup.admin, &borrower);
+
+    assert!(setup.liquid_contract.has_borrower(&borrower));
+
+    setup
+        .liquid_contract
+        .client()
+        .remove_borrower(&setup.admin, &borrower);
+
+    assert!(!setup.liquid_contract.has_borrower(&borrower));
+}
+
+#[test]
+#[should_panic(expected = "borrower is not registered")]
+fn test_remove_without_borrower() {
     let setup = Setup::new();
 
     let borrower = Address::generate(&setup.env);
