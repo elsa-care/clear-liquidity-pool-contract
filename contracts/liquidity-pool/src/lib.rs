@@ -9,8 +9,8 @@ mod types;
 use crate::interface::LiquidityPoolTrait;
 use crate::percentage::process_lender_contribution;
 use crate::storage::{
-    has_admin, has_borrower, has_lender, read_admin, read_contract_balance, read_lender,
-    read_contributions, read_token, remove_borrower, remove_lender, remove_lender_contribution, 
+    has_admin, has_borrower, has_lender, read_admin, read_contract_balance, read_contributions,
+    read_lender, read_token, remove_borrower, remove_lender, remove_lender_contribution,
     write_admin, write_borrower, write_contract_balance, write_lender, write_lender_contribution,
     write_token,
 };
