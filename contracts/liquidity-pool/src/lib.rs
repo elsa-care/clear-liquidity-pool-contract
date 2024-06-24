@@ -19,9 +19,9 @@ use soroban_sdk::{
 };
 
 fn token_transfer(env: &Env, from: &Address, to: &Address, amount: &i128) {
-    let token_id = read_token(&env);
-    let token = token::Client::new(&env, &token_id);
-    token.transfer(&from, &to, &amount);
+    let token_id = read_token(env);
+    let token = token::Client::new(env, &token_id);
+    token.transfer(from, to, amount);
 }
 
 #[contract]
