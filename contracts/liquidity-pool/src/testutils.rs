@@ -18,7 +18,7 @@ pub fn create_test_contract(
     let contract_id = register_test_contract(env);
     let contract = LiquidityPoolContract::new(env, contract_id.clone());
 
-    contract.client().initialize(&admin, &token);
+    contract.client().initialize(admin, token);
 
     (contract_id, contract)
 }
@@ -95,12 +95,12 @@ impl LiquidityPoolContract {
 
     pub fn has_borrower(&self, borrower: &Address) -> bool {
         self.env
-            .as_contract(&self.contract_id, || has_borrower(&self.env, &borrower))
+            .as_contract(&self.contract_id, || has_borrower(&self.env, borrower))
     }
 
     pub fn has_lender(&self, lender: &Address) -> bool {
         self.env
-            .as_contract(&self.contract_id, || has_lender(&self.env, &lender))
+            .as_contract(&self.contract_id, || has_lender(&self.env, lender))
     }
 
     pub fn read_token(&self) -> Address {
@@ -115,6 +115,6 @@ impl LiquidityPoolContract {
 
     pub fn read_lender(&self, lender: &Address) -> i128 {
         self.env
-            .as_contract(&self.contract_id, || read_lender(&self.env, &lender))
+            .as_contract(&self.contract_id, || read_lender(&self.env, lender))
     }
 }
