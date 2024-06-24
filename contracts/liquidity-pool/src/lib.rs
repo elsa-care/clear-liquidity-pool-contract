@@ -7,10 +7,11 @@ mod types;
 
 use crate::interface::LiquidityPoolTrait;
 use crate::storage::{
-    has_admin, has_borrower, has_lender, read_admin, read_contract_balance, read_lender,
-    read_token, remove_borrower, remove_lender, write_admin, write_borrower,
-    write_contract_balance, write_lender, write_token,
+    has_admin, has_borrower, has_lender, has_loan, read_admin, read_contract_balance,
+    read_contributions, read_lender, read_token, remove_borrower, remove_lender, write_admin,
+    write_borrower, write_contract_balance, write_lender, write_loan, write_token,
 };
+use crate::types::Loan;
 
 use soroban_sdk::{
     contract, contractimpl,
@@ -86,6 +87,38 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         write_contract_balance(&env, &(total_balance - amount));
         write_lender(&env, &lender, &(lender_balance - amount));
+    }
+
+    fn loan(env: Env, borrower: Address, amount: i128) {
+        borrower.require_auth();
+
+        assert!(amount > 0, "amount must be positive");
+        assert!(has_borrower(&env, &borrower), "borrower is not registered");
+        assert!(
+            !has_loan(&env, &borrower),
+            "borrower already has an active loan"
+        );
+
+        let total_balance = read_contract_balance(&env);
+
+        assert!(
+            total_balance >= amount,
+            "balance not available for the amount requested"
+        );
+
+        token_transfer(&env, &env.current_contract_address(), &borrower, &amount);
+
+        let lenders = read_contributions(&env);
+
+        let new_loan = Loan {
+            amount,
+            start_time: env.ledger().timestamp(),
+            contributions: lenders,
+        };
+
+        write_contract_balance(&env, &(total_balance - amount));
+        write_loan(&env, &borrower, &new_loan);
+        write_borrower(&env, &borrower, true);
     }
 
     fn add_borrower(env: Env, admin: Address, borrower: Address) {
