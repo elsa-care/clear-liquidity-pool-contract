@@ -1,6 +1,6 @@
-use soroban_sdk::{Address, Env};
+use soroban_sdk::{Address, Env, Map};
 
-use crate::types::DataKey;
+use crate::types::{DataKey, Loan};
 
 pub fn has_admin(env: &Env) -> bool {
     env.storage().persistent().has(&DataKey::Admin)
@@ -16,6 +16,12 @@ pub fn has_borrower(env: &Env, borrower: &Address) -> bool {
         .has(&DataKey::Borrower(borrower.clone()))
 }
 
+pub fn has_loan(env: &Env, borrower: &Address) -> bool {
+    env.storage()
+        .persistent()
+        .has(&DataKey::Loan(borrower.clone()))
+}
+
 pub fn has_lender(env: &Env, lender: &Address) -> bool {
     env.storage()
         .persistent()
@@ -27,6 +33,13 @@ pub fn read_contract_balance(env: &Env) -> i128 {
         .persistent()
         .get(&DataKey::TotalBalance)
         .unwrap_or(0)
+}
+
+pub fn read_contributions(env: &Env) -> Map<Address, i64> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::LenderContribution)
+        .unwrap_or(Map::new(env))
 }
 
 pub fn read_lender(env: &Env, lender: &Address) -> i128 {
@@ -66,6 +79,12 @@ pub fn write_contract_balance(env: &Env, amount: &i128) {
     env.storage()
         .persistent()
         .set(&DataKey::TotalBalance, amount);
+}
+
+pub fn write_loan(env: &Env, borrower: &Address, loan: &Loan) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::Loan(borrower.clone()), loan);
 }
 
 pub fn write_lender(env: &Env, lender: &Address, amount: &i128) {
