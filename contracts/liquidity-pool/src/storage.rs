@@ -33,22 +33,13 @@ pub fn read_contributions(env: &Env) -> Map<Address, i64> {
     env.storage()
         .persistent()
         .get(&DataKey::LenderContribution)
-        .unwrap_or(Map::new(&env))
+        .unwrap_or(Map::new(env))
 }
 
 pub fn read_lender(env: &Env, lender: &Address) -> i128 {
     env.storage()
         .persistent()
         .get(&DataKey::Lender(lender.clone()))
-        .unwrap_or(0)
-}
-
-pub fn read_lender_contribution(env: &Env, lender: &Address) -> i64 {
-    let lender_contribution = read_contributions(&env);
-
-    lender_contribution
-        .get(lender.clone())
-        .map(|v| v)
         .unwrap_or(0)
 }
 
@@ -69,7 +60,7 @@ pub fn remove_lender(env: &Env, lender: &Address) {
 }
 
 pub fn remove_lender_contribution(env: &Env, lender: &Address) {
-    let mut lender_contribution = read_contributions(&env);
+    let mut lender_contribution = read_contributions(env);
 
     lender_contribution.remove(lender.clone());
 
