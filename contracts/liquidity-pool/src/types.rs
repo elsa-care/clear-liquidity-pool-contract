@@ -6,6 +6,7 @@ pub enum DataKey {
     TotalBalance,
     Token,
     Admin,
+    LenderContribution,
     Borrower(Address),
     Lender(Address),
 }

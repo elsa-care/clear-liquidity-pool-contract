@@ -1,4 +1,4 @@
-use soroban_sdk::{Address, Env};
+use soroban_sdk::{Address, Env, Map};
 
 use crate::types::DataKey;
 
@@ -29,6 +29,13 @@ pub fn read_contract_balance(env: &Env) -> i128 {
         .unwrap_or(0)
 }
 
+pub fn read_contributions(env: &Env) -> Map<Address, i64> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::LenderContribution)
+        .unwrap_or(Map::new(env))
+}
+
 pub fn read_lender(env: &Env, lender: &Address) -> i128 {
     env.storage()
         .persistent()
@@ -52,6 +59,16 @@ pub fn remove_lender(env: &Env, lender: &Address) {
         .remove(&DataKey::Lender(lender.clone()))
 }
 
+pub fn remove_lender_contribution(env: &Env, lender: &Address) {
+    let mut lender_contribution = read_contributions(env);
+
+    lender_contribution.remove(lender.clone());
+
+    env.storage()
+        .persistent()
+        .set(&DataKey::LenderContribution, &lender_contribution);
+}
+
 pub fn write_admin(env: &Env, admin: &Address) {
     env.storage().persistent().set(&DataKey::Admin, admin);
 }
@@ -72,6 +89,12 @@ pub fn write_lender(env: &Env, lender: &Address, amount: &i128) {
     env.storage()
         .persistent()
         .set(&DataKey::Lender(lender.clone()), amount);
+}
+
+pub fn write_lender_contribution(env: &Env, contributions: Map<Address, i64>) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::LenderContribution, &contributions);
 }
 
 pub fn write_token(env: &Env, address: &Address) {
