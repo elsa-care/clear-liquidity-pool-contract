@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use super::testutils::{create_token_contract, Setup};
+use super::testutils::{create_token_contract, percentage_to_integer, Setup};
 use soroban_sdk::{testutils::Address as _, Address, Env};
 
 #[test]
@@ -90,6 +90,11 @@ fn test_deposit() {
         .mock_all_auths()
         .deposit(&lender1, &4i128);
 
+    assert_eq!(
+        setup.liquid_contract.read_lender_contribution(&lender1),
+        percentage_to_integer(100f64)
+    );
+
     setup
         .liquid_contract
         .client()
@@ -98,7 +103,15 @@ fn test_deposit() {
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 11i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender1), 4i128);
+    assert_eq!(
+        setup.liquid_contract.read_lender_contribution(&lender1),
+        percentage_to_integer(36.363636350)
+    );
     assert_eq!(setup.liquid_contract.read_lender(&lender2), 7i128);
+    assert_eq!(
+        setup.liquid_contract.read_lender_contribution(&lender2),
+        percentage_to_integer(63.636363650)
+    );
 }
 
 #[test]
@@ -161,6 +174,11 @@ fn test_withdraw() {
         .mock_all_auths()
         .deposit(&lender1, &10i128);
 
+    assert_eq!(
+        setup.liquid_contract.read_lender_contribution(&lender1),
+        percentage_to_integer(100f64)
+    );
+
     setup
         .liquid_contract
         .client()
@@ -168,6 +186,14 @@ fn test_withdraw() {
         .deposit(&lender2, &10i128);
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 20i128);
+    assert_eq!(
+        setup.liquid_contract.read_lender_contribution(&lender1),
+        percentage_to_integer(50f64)
+    );
+    assert_eq!(
+        setup.liquid_contract.read_lender_contribution(&lender2),
+        percentage_to_integer(50f64)
+    );
 
     setup
         .liquid_contract
@@ -184,6 +210,14 @@ fn test_withdraw() {
     assert_eq!(setup.liquid_contract.read_contract_balance(), 8i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender1), 5i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender2), 3i128);
+    assert_eq!(
+        setup.liquid_contract.read_lender_contribution(&lender1),
+        percentage_to_integer(62.4999999)
+    );
+    assert_eq!(
+        setup.liquid_contract.read_lender_contribution(&lender2),
+        percentage_to_integer(37.5)
+    );
 }
 
 #[test]
