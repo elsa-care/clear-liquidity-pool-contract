@@ -1,6 +1,6 @@
 use soroban_sdk::{Address, Env, Map};
 
-use crate::types::DataKey;
+use crate::types::{DataKey, Loan};
 
 pub fn has_admin(env: &Env) -> bool {
     env.storage().persistent().has(&DataKey::Admin)
@@ -14,6 +14,12 @@ pub fn has_borrower(env: &Env, borrower: &Address) -> bool {
     env.storage()
         .persistent()
         .has(&DataKey::Borrower(borrower.clone()))
+}
+
+pub fn has_loan(env: &Env, borrower: &Address) -> bool {
+    env.storage()
+        .persistent()
+        .has(&DataKey::Loan(borrower.clone()))
 }
 
 pub fn has_lender(env: &Env, lender: &Address) -> bool {
@@ -83,6 +89,12 @@ pub fn write_contract_balance(env: &Env, amount: &i128) {
     env.storage()
         .persistent()
         .set(&DataKey::TotalBalance, amount);
+}
+
+pub fn write_loan(env: &Env, borrower: &Address, loan: &Loan) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::Loan(borrower.clone()), loan);
 }
 
 pub fn write_lender(env: &Env, lender: &Address, amount: &i128) {
