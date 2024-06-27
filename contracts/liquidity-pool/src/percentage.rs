@@ -1,4 +1,6 @@
-use soroban_sdk::{Address, Map};
+use soroban_sdk::{Address, Env, Map, Vec};
+
+use crate::storage::read_lender;
 
 pub(crate) const ONE_XLM_IN_STROOPS: i64 = 10_000_000;
 
@@ -6,28 +8,30 @@ fn calculate_percentage(amount: &i128, total_balance: &i128) -> i64 {
     ((*amount * 100 * ONE_XLM_IN_STROOPS as i128) / *total_balance) as i64
 }
 
-fn recalculate_percentage(lender_percentage: i64, old_balance: i128, total_balance: &i128) -> i64 {
-    lender_percentage * old_balance as i64 / *total_balance as i64
+pub fn calculate_new_lender_amount(
+    loan_amount: &i128,
+    lender_balance: &i128,
+    percentage: i64,
+) -> i128 {
+    lender_balance - (loan_amount * percentage as i128 / (100 * ONE_XLM_IN_STROOPS as i128))
 }
 
 pub fn process_lender_contribution(
-    length: u32,
-    lender: &Address,
-    mut lender_contribution: Map<Address, i64>,
-    lender_balance: &i128,
+    env: &Env,
+    contributions: Vec<Address>,
+    loan_amount: &i128,
     total_balance: &i128,
-    old_balance: &i128,
-) -> Map<Address, i64> {
-    if lender_contribution.len() == length {
-        let percentage = calculate_percentage(lender_balance, total_balance);
-        lender_contribution.set(lender.clone(), percentage)
-    } else {
-        for (address, percentage) in lender_contribution.iter() {
-            let new_percentage = recalculate_percentage(percentage, *old_balance, total_balance);
-            lender_contribution.set(address.clone(), new_percentage);
-        }
-        let percentage = calculate_percentage(lender_balance, total_balance);
-        lender_contribution.set(lender.clone(), percentage)
+) -> (Map<Address, i64>, Map<Address, i128>) {
+    let mut lender_contributions = Map::new(env);
+    let mut new_lender_amounts = Map::new(env);
+
+    for address in contributions.iter() {
+        let lender_balance = read_lender(env, &address);
+        let percentage = calculate_percentage(&lender_balance, total_balance);
+        let new_lender_amount =
+            calculate_new_lender_amount(loan_amount, &lender_balance, percentage);
+        lender_contributions.set(address.clone(), percentage);
+        new_lender_amounts.set(address.clone(), new_lender_amount);
     }
-    lender_contribution
+    (lender_contributions, new_lender_amounts)
 }

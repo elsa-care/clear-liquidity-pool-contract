@@ -9,10 +9,10 @@ mod types;
 use crate::interface::LiquidityPoolTrait;
 use crate::percentage::process_lender_contribution;
 use crate::storage::{
-    has_admin, has_borrower, has_loan, has_lender, read_admin, read_contract_balance, read_contributions,
-    read_lender, read_token, remove_borrower, remove_lender, remove_lender_contribution,
-    write_admin, write_borrower, write_contract_balance, write_loan, write_lender, write_lender_contribution,
-    write_token,
+    has_admin, has_borrower, has_lender, has_loan, read_admin, read_contract_balance,
+    read_contributions, read_lender, read_token, remove_borrower, remove_lender,
+    remove_lender_contribution, write_admin, write_borrower, write_contract_balance, write_lender,
+    write_lender_contribution, write_loan, write_token,
 };
 use crate::types::Loan;
 
@@ -73,18 +73,12 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_contract_balance(&env, &total_balance);
         write_lender(&env, &lender, &lender_balance);
 
-        let mut lender_contribution = read_contributions(&env);
+        let mut contributions = read_contributions(&env);
 
-        lender_contribution = process_lender_contribution(
-            0,
-            &lender,
-            lender_contribution,
-            &lender_balance,
-            &total_balance,
-            &(total_balance - amount),
-        );
-
-        write_lender_contribution(&env, lender_contribution);
+        if !contributions.contains(lender.clone()) {
+            contributions.push_back(lender);
+            write_lender_contribution(&env, contributions);
+        }
     }
 
     fn withdraw(env: Env, lender: Address, amount: i128) {
@@ -110,22 +104,9 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_contract_balance(&env, &total_balance);
         write_lender(&env, &lender, &lender_balance);
 
-        let mut lender_contribution = read_contributions(&env);
-
-        if lender_balance > 0 {
-            lender_contribution = process_lender_contribution(
-                1,
-                &lender,
-                lender_contribution,
-                &lender_balance,
-                &total_balance,
-                &(total_balance + amount),
-            );
-        } else {
-            lender_contribution.remove(lender.clone());
+        if lender_balance <= 0 {
+            remove_lender_contribution(&env, &lender);
         }
-
-        write_lender_contribution(&env, lender_contribution);
     }
 
     fn loan(env: Env, borrower: Address, amount: i128) {
@@ -149,11 +130,19 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         let lenders = read_contributions(&env);
 
+        let (lender_contributions, new_lender_amounts) =
+            process_lender_contribution(&env, lenders.clone(), &amount, &total_balance);
+
         let new_loan = Loan {
             amount,
             start_time: env.ledger().timestamp(),
-            contributions: lenders,
+            contributions: lender_contributions,
         };
+
+        for lender in lenders.iter() {
+            let new_lender_balance = new_lender_amounts.get(lender.clone()).unwrap();
+            write_lender(&env, &lender, &new_lender_balance);
+        }
 
         write_contract_balance(&env, &(total_balance - amount));
         write_loan(&env, &borrower, &new_loan);
