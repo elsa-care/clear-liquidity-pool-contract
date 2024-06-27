@@ -2,8 +2,8 @@
 
 use crate::percentage::ONE_XLM_IN_STROOPS;
 use crate::storage::{
-    has_borrower, has_loan, has_lender, read_admin, read_contract_balance, read_contributions, read_lender,
-    read_token,
+    has_borrower, has_lender, has_loan, read_admin, read_contract_balance, read_contributions,
+    read_lender, read_token,
 };
 use crate::LiquidityPoolContractClient;
 use soroban_sdk::{
