@@ -14,7 +14,7 @@ pub enum DataKey {
     TotalBalance,
     Token,
     Admin,
-    LenderContribution,
+    Contribution,
     Borrower(Address),
     Lender(Address),
     Loan(Address),
