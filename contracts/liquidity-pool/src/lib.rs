@@ -7,12 +7,12 @@ mod testutils;
 mod types;
 
 use crate::interface::LiquidityPoolTrait;
-use crate::percentage::process_lender_contribution;
+use crate::percentage::{calculate_repayment_amount, process_lender_contribution};
 use crate::storage::{
     has_admin, has_borrower, has_lender, has_loan, read_admin, read_contract_balance,
-    read_contributions, read_lender, read_token, remove_borrower, remove_lender,
-    remove_lender_contribution, write_admin, write_borrower, write_contract_balance, write_lender,
-    write_lender_contribution, write_loan, write_token,
+    read_contributions, read_lender, read_loan, read_token, remove_borrower, remove_lender,
+    remove_lender_contribution, remove_loan, write_admin, write_borrower, write_contract_balance,
+    write_lender, write_lender_contribution, write_loan, write_token,
 };
 use crate::types::Loan;
 
@@ -26,6 +26,17 @@ fn token_transfer(env: &Env, from: &Address, to: &Address, amount: &i128) {
     let token_id = read_token(env);
     let token = token::Client::new(env, &token_id);
     token.transfer(from, to, amount);
+}
+
+fn calculate_fees(env: &Env, loan: &Loan) -> i128 {
+    let now_ledger = env.ledger().timestamp();
+    let start_time = loan.start_time;
+    let interest_rate_per_day = 1;
+    let seconds_per_day = 86400;
+
+    let duration_days = (now_ledger - start_time) / seconds_per_day;
+
+    loan.amount * (interest_rate_per_day * duration_days) as i128 / 100
 }
 
 #[contract]
@@ -147,6 +158,41 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_contract_balance(&env, &(total_balance - amount));
         write_loan(&env, &borrower, &new_loan);
         write_borrower(&env, &borrower, true);
+    }
+
+    fn repay_loan(env: Env, borrower: Address, amount: i128) {
+        borrower.require_auth();
+
+        assert!(amount > 0, "amount must be positive");
+        assert!(has_borrower(&env, &borrower), "borrower is not registered");
+
+        let mut loan = match read_loan(&env, &borrower) {
+            Some(loan) => loan,
+            None => panic!("borrower has no active loan"),
+        };
+
+        token_transfer(&env, &borrower, &env.current_contract_address(), &amount);
+
+        for (lender, percentage) in loan.contributions.iter() {
+            let lender_balance = read_lender(&env, &lender);
+            let repay_lender_amount =
+                lender_balance + calculate_repayment_amount(amount, percentage);
+            write_lender(&env, &lender, &repay_lender_amount);
+        }
+
+        let repay_loan_amount = loan.amount + calculate_fees(&env, &loan);
+        let mut total_balance = read_contract_balance(&env);
+        total_balance += amount;
+
+        if (repay_loan_amount - amount) > 0 {
+            loan.amount = repay_loan_amount - amount;
+            write_loan(&env, &borrower, &loan);
+        } else {
+            write_borrower(&env, &borrower, false);
+            remove_loan(&env, &borrower);
+        }
+
+        write_contract_balance(&env, &total_balance);
     }
 
     fn add_borrower(env: Env, admin: Address, borrower: Address) {
