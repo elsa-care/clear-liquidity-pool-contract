@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use super::testutils::{create_token_contract, percentage_to_integer, Setup};
+use super::testutils::{create_token_contract, Setup};
 use soroban_sdk::{testutils::Address as _, Address, Env};
 
 #[test]
@@ -90,11 +90,6 @@ fn test_deposit() {
         .mock_all_auths()
         .deposit(&lender1, &4i128);
 
-    assert_eq!(
-        setup.liquid_contract.read_lender_contribution(&lender1),
-        percentage_to_integer(100f64)
-    );
-
     setup
         .liquid_contract
         .client()
@@ -103,15 +98,10 @@ fn test_deposit() {
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 11i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender1), 4i128);
-    assert_eq!(
-        setup.liquid_contract.read_lender_contribution(&lender1),
-        percentage_to_integer(36.363636350)
-    );
+    assert!(setup.liquid_contract.is_lender_in_contributions(&lender1));
+
     assert_eq!(setup.liquid_contract.read_lender(&lender2), 7i128);
-    assert_eq!(
-        setup.liquid_contract.read_lender_contribution(&lender2),
-        percentage_to_integer(63.636363650)
-    );
+    assert!(setup.liquid_contract.is_lender_in_contributions(&lender2));
 }
 
 #[test]
@@ -174,11 +164,6 @@ fn test_withdraw() {
         .mock_all_auths()
         .deposit(&lender1, &10i128);
 
-    assert_eq!(
-        setup.liquid_contract.read_lender_contribution(&lender1),
-        percentage_to_integer(100f64)
-    );
-
     setup
         .liquid_contract
         .client()
@@ -186,14 +171,8 @@ fn test_withdraw() {
         .deposit(&lender2, &10i128);
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 20i128);
-    assert_eq!(
-        setup.liquid_contract.read_lender_contribution(&lender1),
-        percentage_to_integer(50f64)
-    );
-    assert_eq!(
-        setup.liquid_contract.read_lender_contribution(&lender2),
-        percentage_to_integer(50f64)
-    );
+    assert!(setup.liquid_contract.is_lender_in_contributions(&lender1));
+    assert!(setup.liquid_contract.is_lender_in_contributions(&lender2));
 
     setup
         .liquid_contract
@@ -210,14 +189,44 @@ fn test_withdraw() {
     assert_eq!(setup.liquid_contract.read_contract_balance(), 8i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender1), 5i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender2), 3i128);
-    assert_eq!(
-        setup.liquid_contract.read_lender_contribution(&lender1),
-        percentage_to_integer(62.4999999)
-    );
-    assert_eq!(
-        setup.liquid_contract.read_lender_contribution(&lender2),
-        percentage_to_integer(37.5)
-    );
+    assert!(setup.liquid_contract.is_lender_in_contributions(&lender1));
+    assert!(setup.liquid_contract.is_lender_in_contributions(&lender2));
+}
+
+#[test]
+fn test_withdraw_by_remove_contribution() {
+    let setup = Setup::new();
+    let lender = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .add_lender(&setup.admin, &lender);
+
+    setup.token_admin.mock_all_auths().mint(&lender, &10i128);
+    setup
+        .token_admin
+        .mock_all_auths()
+        .mint(&setup.liquid_contract_id, &10i128);
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_all_auths()
+        .deposit(&lender, &10i128);
+
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 10i128);
+    assert!(setup.liquid_contract.is_lender_in_contributions(&lender));
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_all_auths()
+        .withdraw(&lender, &10i128);
+
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender), 0i128);
+    assert!(!setup.liquid_contract.is_lender_in_contributions(&lender));
 }
 
 #[test]
@@ -289,26 +298,39 @@ fn test_withdraw_amount_greater_lender_balance() {
 fn test_loan() {
     let setup = Setup::new();
     let borrower = Address::generate(&setup.env);
-    let lender = Address::generate(&setup.env);
+    let lender1 = Address::generate(&setup.env);
+    let lender2 = Address::generate(&setup.env);
 
     setup
         .liquid_contract
         .client()
-        .add_lender(&setup.admin, &lender);
+        .add_lender(&setup.admin, &lender1);
 
-    setup.token_admin.mock_all_auths().mint(&lender, &10i128);
+    setup
+        .liquid_contract
+        .client()
+        .add_lender(&setup.admin, &lender2);
+
+    setup.token_admin.mock_all_auths().mint(&lender1, &10i128);
+    setup.token_admin.mock_all_auths().mint(&lender2, &10i128);
     setup
         .token_admin
         .mock_all_auths()
-        .mint(&setup.liquid_contract_id, &10i128);
+        .mint(&setup.liquid_contract_id, &20i128);
 
     setup
         .liquid_contract
         .client()
         .mock_all_auths()
-        .deposit(&lender, &10i128);
+        .deposit(&lender1, &10i128);
 
-    assert_eq!(setup.liquid_contract.read_contract_balance(), 10i128);
+    setup
+        .liquid_contract
+        .client()
+        .mock_all_auths()
+        .deposit(&lender2, &10i128);
+
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 20i128);
 
     setup
         .liquid_contract
@@ -321,8 +343,10 @@ fn test_loan() {
         .mock_all_auths()
         .loan(&borrower, &10i128);
 
-    assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 10i128);
     assert!(setup.liquid_contract.has_loan(&borrower));
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), 5i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), 5i128);
 }
 
 #[test]
