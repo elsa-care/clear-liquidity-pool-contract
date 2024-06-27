@@ -17,7 +17,7 @@ use crate::storage::{
 use crate::types::Loan;
 
 use soroban_sdk::{
-    contract, contractimpl,
+    contract, contractimpl, contractmeta,
     token::{self},
     Address, Env,
 };
@@ -27,6 +27,11 @@ fn token_transfer(env: &Env, from: &Address, to: &Address, amount: &i128) {
     let token = token::Client::new(env, &token_id);
     token.transfer(from, to, amount);
 }
+
+contractmeta!(
+    key = "Description",
+    val = "Liquidity pool for loans with a daily fee of 1%"
+);
 
 #[contract]
 pub struct LiquidityPoolContract;
