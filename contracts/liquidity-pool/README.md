@@ -7,7 +7,7 @@ Clear Smart Contract is a liquidity pool for loans with a daily fee of 1%.
 There are three types of users in our contract:
 
 - **Admin:** Manages the contract and decides who enters/exits as a lender or borrower.
-- **Lenders:** Provide liquidity to the contract and withdraw their money whenever they want.
+- **Lenders:** Provide liquidity to the contract by depositing funds that can be loaned to borrowers. They earn income through the 1% daily interest charged to borrowers and can withdraw their money at any time. The earned interest is distributed proportionally according to each lender's contribution to the liquidity pool.
 - **Borrowers:** Request loans from the contract and repay them whenever they want, knowing that the loan interest rate is 1% daily. They can only request one loan at a time.
 
 ## Contract Attributes:
