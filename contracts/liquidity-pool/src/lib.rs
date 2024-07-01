@@ -194,6 +194,19 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         write_contract_balance(&env, &total_balance);
     }
+  
+     fn repay_loan_amount(env: Env, borrower: Address) -> i128 {
+        borrower.require_auth();
+
+        assert!(has_borrower(&env, &borrower), "borrower is not registered");
+
+        let loan = match read_loan(&env, &borrower) {
+            Some(loan) => loan,
+            None => panic!("borrower has no active loan"),
+        };
+
+        loan.amount + calculate_fees(&env, &loan)
+    }
 
     fn add_borrower(env: Env, admin: Address, borrower: Address) {
         assert_eq!(

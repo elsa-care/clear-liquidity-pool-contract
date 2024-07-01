@@ -12,6 +12,8 @@ pub trait LiquidityPoolTrait {
     fn loan(env: Env, borrower: Address, amount: i128);
 
     fn repay_loan(env: Env, borrower: Address, amount: i128);
+  
+    fn repay_loan_amount(env: Env, borrower: Address) -> i128;
 
     fn add_lender(env: Env, admin: Address, lender: Address);
 
