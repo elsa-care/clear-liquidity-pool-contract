@@ -55,12 +55,6 @@ pub fn read_lender(env: &Env, lender: &Address) -> i128 {
         .unwrap_or(0)
 }
 
-pub fn read_loan(env: &Env, borrower: &Address) -> Option<Loan> {
-    env.storage()
-        .persistent()
-        .get(&DataKey::Loan(borrower.clone()))
-}
-
 pub fn read_token(env: &Env) -> Address {
     env.storage().persistent().get(&DataKey::Token).unwrap()
 }
