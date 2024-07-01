@@ -17,7 +17,7 @@ use crate::storage::{
 use crate::types::Loan;
 
 use soroban_sdk::{
-    contract, contractimpl,
+    contract, contractimpl, contractmeta,
     token::{self},
     Address, Env,
 };
@@ -38,6 +38,11 @@ fn calculate_fees(env: &Env, loan: &Loan) -> i128 {
 
     loan.amount * (interest_rate_per_day * duration_days) as i128 / 100
 }
+
+contractmeta!(
+    key = "Description",
+    val = "Liquidity pool for loans with a daily fee of 1%"
+);
 
 #[contract]
 pub struct LiquidityPoolContract;
