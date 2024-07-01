@@ -16,6 +16,10 @@ pub fn calculate_new_lender_amount(
     lender_balance - (loan_amount * percentage as i128 / (100 * ONE_XLM_IN_STROOPS as i128))
 }
 
+pub fn calculate_repayment_amount(amount: i128, percentage: i64) -> i128 {
+    (amount * percentage as i128) / (100 * ONE_XLM_IN_STROOPS as i128)
+}
+
 pub fn process_lender_contribution(
     env: &Env,
     contributions: Vec<Address>,
