@@ -2,14 +2,23 @@
 
 use crate::storage::{
     has_borrower, has_lender, has_loan, read_admin, read_contract_balance, read_contributions,
-    read_lender, read_token,
+    read_lender, read_loan, read_token,
 };
 use crate::LiquidityPoolContractClient;
 use soroban_sdk::{
-    testutils::Address as _,
+    testutils::{Address as _, Ledger},
     token::{self, StellarAssetClient},
     Address, Env,
 };
+
+pub fn set_timestamp_for_20_days(env: &Env) {
+    let initial_timestamp = env.ledger().timestamp();
+    let days = 20;
+    let seconds_per_day = 86400;
+    let new_timestamp = initial_timestamp + (days * seconds_per_day) as u64;
+
+    env.ledger().set_timestamp(new_timestamp)
+}
 
 pub fn create_test_contract(
     env: &Env,
@@ -117,6 +126,13 @@ impl LiquidityPoolContract {
     pub fn read_contract_balance(&self) -> i128 {
         self.env
             .as_contract(&self.contract_id, || read_contract_balance(&self.env))
+    }
+
+    pub fn read_loan_amount(&self, borrower: &Address) -> i128 {
+        self.env.as_contract(&self.contract_id, || {
+            let loan = read_loan(&self.env, borrower).unwrap();
+            loan.amount
+        })
     }
 
     pub fn read_lender(&self, lender: &Address) -> i128 {

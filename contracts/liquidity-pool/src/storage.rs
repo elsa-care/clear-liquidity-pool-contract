@@ -42,6 +42,12 @@ pub fn read_contributions(env: &Env) -> Vec<Address> {
         .unwrap_or(Vec::new(env))
 }
 
+pub fn read_loan(env: &Env, borrower: &Address) -> Option<Loan> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Loan(borrower.clone()))
+}
+
 pub fn read_lender(env: &Env, lender: &Address) -> i128 {
     env.storage()
         .persistent()
@@ -57,6 +63,12 @@ pub fn remove_borrower(env: &Env, borrower: &Address) {
     env.storage()
         .persistent()
         .remove(&DataKey::Borrower(borrower.clone()))
+}
+
+pub fn remove_loan(env: &Env, borrower: &Address) {
+    env.storage()
+        .persistent()
+        .remove(&DataKey::Loan(borrower.clone()))
 }
 
 pub fn remove_lender(env: &Env, lender: &Address) {
