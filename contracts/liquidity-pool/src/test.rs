@@ -691,7 +691,6 @@ fn test_repay_loan_amount_without_active_loan() {
         .repay_loan_amount(&borrower);
 }
 
-
 #[test]
 fn test_add_borrower() {
     let setup = Setup::new();
