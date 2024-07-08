@@ -440,26 +440,26 @@ fn test_repay_loan_with_repayment_total_amount() {
         .client()
         .add_lender(&setup.admin, &lender2);
 
-    setup.token_admin.mock_all_auths().mint(&lender1, &10i128);
-    setup.token_admin.mock_all_auths().mint(&lender2, &10i128);
+    setup.token_admin.mock_all_auths().mint(&lender1, &500i128);
+    setup.token_admin.mock_all_auths().mint(&lender2, &500i128);
     setup
         .token_admin
         .mock_all_auths()
-        .mint(&setup.liquid_contract_id, &20i128);
+        .mint(&setup.liquid_contract_id, &1000i128);
 
     setup
         .liquid_contract
         .client()
         .mock_all_auths()
-        .deposit(&lender1, &10i128);
+        .deposit(&lender1, &500i128);
 
     setup
         .liquid_contract
         .client()
         .mock_all_auths()
-        .deposit(&lender2, &10i128);
+        .deposit(&lender2, &500i128);
 
-    assert_eq!(setup.liquid_contract.read_contract_balance(), 20i128);
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 1000i128);
 
     setup
         .liquid_contract
@@ -470,26 +470,29 @@ fn test_repay_loan_with_repayment_total_amount() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .loan(&borrower, &10i128);
+        .loan(&borrower, &1000i128);
 
-    assert_eq!(setup.liquid_contract.read_contract_balance(), 10i128);
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
     assert!(setup.liquid_contract.has_loan(&borrower));
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 5i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 5i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), 0i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), 0i128);
 
     set_timestamp_for_20_days(&setup.env);
 
-    setup.token_admin.mock_all_auths().mint(&borrower, &12i128);
+    setup
+        .token_admin
+        .mock_all_auths()
+        .mint(&borrower, &1002i128);
 
     setup
         .liquid_contract
         .client()
         .mock_all_auths()
-        .repay_loan(&borrower, &12i128);
+        .repay_loan(&borrower, &1002i128);
 
-    assert_eq!(setup.liquid_contract.read_contract_balance(), 22i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 11i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 11i128);
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 1002i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), 501i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), 501i128);
     assert!(!setup.liquid_contract.has_loan(&borrower));
 }
 
@@ -510,26 +513,26 @@ fn test_repay_loan_without_repayment_total_amount() {
         .client()
         .add_lender(&setup.admin, &lender2);
 
-    setup.token_admin.mock_all_auths().mint(&lender1, &10i128);
-    setup.token_admin.mock_all_auths().mint(&lender2, &10i128);
+    setup.token_admin.mock_all_auths().mint(&lender1, &500i128);
+    setup.token_admin.mock_all_auths().mint(&lender2, &500i128);
     setup
         .token_admin
         .mock_all_auths()
-        .mint(&setup.liquid_contract_id, &20i128);
+        .mint(&setup.liquid_contract_id, &1000i128);
 
     setup
         .liquid_contract
         .client()
         .mock_all_auths()
-        .deposit(&lender1, &10i128);
+        .deposit(&lender1, &500i128);
 
     setup
         .liquid_contract
         .client()
         .mock_all_auths()
-        .deposit(&lender2, &10i128);
+        .deposit(&lender2, &500i128);
 
-    assert_eq!(setup.liquid_contract.read_contract_balance(), 20i128);
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 1000i128);
 
     setup
         .liquid_contract
@@ -540,26 +543,29 @@ fn test_repay_loan_without_repayment_total_amount() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .loan(&borrower, &10i128);
+        .loan(&borrower, &1000i128);
 
-    assert_eq!(setup.liquid_contract.read_contract_balance(), 10i128);
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
     assert!(setup.liquid_contract.has_loan(&borrower));
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 5i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 5i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), 0i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), 0i128);
 
     set_timestamp_for_20_days(&setup.env);
 
-    setup.token_admin.mock_all_auths().mint(&borrower, &10i128);
+    setup
+        .token_admin
+        .mock_all_auths()
+        .mint(&borrower, &1000i128);
 
     setup
         .liquid_contract
         .client()
         .mock_all_auths()
-        .repay_loan(&borrower, &10i128);
+        .repay_loan(&borrower, &1000i128);
 
-    assert_eq!(setup.liquid_contract.read_contract_balance(), 20i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 10i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 10i128);
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 1000i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), 500i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), 500i128);
     assert!(setup.liquid_contract.has_loan(&borrower));
     assert_eq!(setup.liquid_contract.read_loan_amount(&borrower), 2i128);
 }
@@ -624,19 +630,19 @@ fn test_repay_loan_amount() {
         .client()
         .add_lender(&setup.admin, &lender);
 
-    setup.token_admin.mock_all_auths().mint(&lender, &10i128);
+    setup.token_admin.mock_all_auths().mint(&lender, &1000i128);
     setup
         .token_admin
         .mock_all_auths()
-        .mint(&setup.liquid_contract_id, &10i128);
+        .mint(&setup.liquid_contract_id, &1000i128);
 
     setup
         .liquid_contract
         .client()
         .mock_all_auths()
-        .deposit(&lender, &10i128);
+        .deposit(&lender, &1000i128);
 
-    assert_eq!(setup.liquid_contract.read_contract_balance(), 10i128);
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 1000i128);
 
     setup
         .liquid_contract
@@ -647,9 +653,10 @@ fn test_repay_loan_amount() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .loan(&borrower, &10i128);
+        .loan(&borrower, &1000i128);
 
     assert!(setup.liquid_contract.has_loan(&borrower));
+    set_timestamp_for_20_days(&setup.env);
 
     let loan_amount = setup
         .liquid_contract
@@ -657,7 +664,7 @@ fn test_repay_loan_amount() {
         .mock_all_auths()
         .repay_loan_amount(&borrower);
 
-    assert_eq!(loan_amount, 10);
+    assert_eq!(loan_amount, 1002i128);
 }
 
 #[test]
