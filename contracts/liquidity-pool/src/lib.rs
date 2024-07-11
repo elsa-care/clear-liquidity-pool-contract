@@ -31,12 +31,12 @@ fn token_transfer(env: &Env, from: &Address, to: &Address, amount: &i128) {
 fn calculate_fees(env: &Env, loan: &Loan) -> i128 {
     let now_ledger = env.ledger().timestamp();
     let start_time = loan.start_time;
-    let interest_rate_per_day = 1;
+    let interest_rate_per_day = 10;
     let seconds_per_day = 86400;
 
     let duration_days = (now_ledger - start_time) / seconds_per_day;
 
-    loan.amount * (interest_rate_per_day * duration_days) as i128 / 100
+    loan.amount * (interest_rate_per_day * duration_days) as i128 / 100_000
 }
 
 fn generate_id(env: &Env, loans: &Vec<Loan>) -> u64 {
@@ -50,7 +50,7 @@ fn generate_id(env: &Env, loans: &Vec<Loan>) -> u64 {
 
 contractmeta!(
     key = "Description",
-    val = "Liquidity pool for loans with a daily fee of 1%"
+    val = "Liquidity pool for loans with a daily fee of 0.1%"
 );
 
 #[contract]
@@ -217,7 +217,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
     fn repay_loan_amount(env: Env, borrower: Address, loan_id: u64) -> i128 {
         borrower.require_auth();
-
+      
         assert!(has_borrower(&env, &borrower), "borrower is not registered");
 
         let loans = read_loans(&env, &borrower);
@@ -229,12 +229,9 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         loan.amount + calculate_fees(&env, &loan)
     }
 
-    fn add_borrower(env: Env, admin: Address, borrower: Address) {
-        assert_eq!(
-            read_admin(&env),
-            admin,
-            "only the stored admin can add borrowers"
-        );
+    fn add_borrower(env: Env, borrower: Address) {
+        let admin = read_admin(&env);
+        admin.require_auth();
 
         assert!(
             !has_borrower(&env, &borrower),
@@ -244,35 +241,28 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_borrower(&env, &borrower, false);
     }
 
-    fn remove_borrower(env: Env, admin: Address, borrower: Address) {
-        assert_eq!(
-            read_admin(&env),
-            admin,
-            "only the stored admin can add borrowers"
-        );
+    fn remove_borrower(env: Env, borrower: Address) {
+        let admin = read_admin(&env);
+        admin.require_auth();
 
         assert!(has_borrower(&env, &borrower), "borrower is not registered");
 
         remove_borrower(&env, &borrower);
     }
 
-    fn add_lender(env: Env, admin: Address, lender: Address) {
-        assert_eq!(
-            read_admin(&env),
-            admin,
-            "only the stored admin can add lenders"
-        );
+    fn add_lender(env: Env, lender: Address) {
+        let admin = read_admin(&env);
+        admin.require_auth();
+
         assert!(!has_lender(&env, &lender), "lender is already registered");
 
         write_lender(&env, &lender, &0i128);
     }
 
-    fn remove_lender(env: Env, admin: Address, lender: Address) {
-        assert_eq!(
-            read_admin(&env),
-            admin,
-            "only the stored admin can add lenders"
-        );
+    fn remove_lender(env: Env, lender: Address) {
+        let admin = read_admin(&env);
+        admin.require_auth();
+
         assert!(has_lender(&env, &lender), "lender is not registered");
 
         remove_lender(&env, &lender);
