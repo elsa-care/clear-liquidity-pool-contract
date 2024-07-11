@@ -9,17 +9,17 @@ mod types;
 use crate::interface::LiquidityPoolTrait;
 use crate::percentage::{calculate_repayment_amount, process_lender_contribution};
 use crate::storage::{
-    has_admin, has_borrower, has_lender, has_loan, read_admin, read_contract_balance,
-    read_contributions, read_lender, read_loan, read_token, remove_borrower, remove_lender,
-    remove_lender_contribution, remove_loan, write_admin, write_borrower, write_contract_balance,
-    write_lender, write_lender_contribution, write_loan, write_token,
+    has_admin, has_borrower, has_lender, read_admin, read_contract_balance, read_contributions,
+    read_lender, read_loans, read_token, remove_borrower, remove_lender,
+    remove_lender_contribution, write_admin, write_borrower, write_contract_balance, write_lender,
+    write_lender_contribution, write_loans, write_token,
 };
 use crate::types::Loan;
 
 use soroban_sdk::{
     contract, contractimpl, contractmeta,
     token::{self},
-    Address, Env,
+    Address, Env, Vec,
 };
 
 fn token_transfer(env: &Env, from: &Address, to: &Address, amount: &i128) {
@@ -37,6 +37,15 @@ fn calculate_fees(env: &Env, loan: &Loan) -> i128 {
     let duration_days = (now_ledger - start_time) / seconds_per_day;
 
     loan.amount * (interest_rate_per_day * duration_days) as i128 / 100_000
+}
+
+fn generate_id(env: &Env, loans: &Vec<Loan>) -> u64 {
+    loop {
+        let new_id = env.prng().gen();
+        if !loans.iter().any(|loan| loan.id == new_id) {
+            return new_id;
+        }
+    }
 }
 
 contractmeta!(
@@ -125,15 +134,11 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         }
     }
 
-    fn loan(env: Env, borrower: Address, amount: i128) {
+    fn loan(env: Env, borrower: Address, amount: i128) -> u64 {
         borrower.require_auth();
 
         assert!(amount > 0, "amount must be positive");
         assert!(has_borrower(&env, &borrower), "borrower is not registered");
-        assert!(
-            !has_loan(&env, &borrower),
-            "borrower already has an active loan"
-        );
 
         let total_balance = read_contract_balance(&env);
 
@@ -149,11 +154,16 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         let (lender_contributions, new_lender_amounts) =
             process_lender_contribution(&env, lenders.clone(), &amount, &total_balance);
 
+        let mut loans = read_loans(&env, &borrower);
+
         let new_loan = Loan {
+            id: generate_id(&env, &loans),
             amount,
             start_time: env.ledger().timestamp(),
             contributions: lender_contributions,
         };
+
+        loans.push_back(new_loan.clone());
 
         for lender in lenders.iter() {
             let new_lender_balance = new_lender_amounts.get(lender.clone()).unwrap();
@@ -161,20 +171,25 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         }
 
         write_contract_balance(&env, &(total_balance - amount));
-        write_loan(&env, &borrower, &new_loan);
+        write_loans(&env, &borrower, &loans);
         write_borrower(&env, &borrower, true);
+
+        new_loan.id
     }
 
-    fn repay_loan(env: Env, borrower: Address, amount: i128) {
+    fn repay_loan(env: Env, borrower: Address, loan_id: u64, amount: i128) {
         borrower.require_auth();
 
         assert!(amount > 0, "amount must be positive");
         assert!(has_borrower(&env, &borrower), "borrower is not registered");
 
-        let mut loan = match read_loan(&env, &borrower) {
-            Some(loan) => loan,
-            None => panic!("borrower has no active loan"),
-        };
+        let mut loans = read_loans(&env, &borrower);
+        let (loan_index, mut loan) = loans
+            .iter()
+            .enumerate()
+            .find(|(_, loan)| loan.id == loan_id)
+            .map(|(index, loan)| (index, loan.clone()))
+            .expect("borrower's loan was not found or exists");
 
         token_transfer(&env, &borrower, &env.current_contract_address(), &amount);
 
@@ -191,22 +206,25 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         if (repay_loan_amount - amount) > 0 {
             loan.amount = repay_loan_amount - amount;
-            write_loan(&env, &borrower, &loan);
+            loans.set(loan_index as u32, loan);
         } else {
-            write_borrower(&env, &borrower, false);
-            remove_loan(&env, &borrower);
+            loans.remove(loan_index as u32);
         }
 
+        write_loans(&env, &borrower, &loans);
         write_contract_balance(&env, &total_balance);
     }
 
-    fn repay_loan_amount(env: Env, borrower: Address) -> i128 {
+    fn repay_loan_amount(env: Env, borrower: Address, loan_id: u64) -> i128 {
+        borrower.require_auth();
+      
         assert!(has_borrower(&env, &borrower), "borrower is not registered");
 
-        let loan = match read_loan(&env, &borrower) {
-            Some(loan) => loan,
-            None => panic!("borrower has no active loan"),
-        };
+        let loans = read_loans(&env, &borrower);
+        let loan = loans
+            .iter()
+            .find(|loan| loan.id == loan_id)
+            .expect("borrower's loan was not found or exists");
 
         loan.amount + calculate_fees(&env, &loan)
     }

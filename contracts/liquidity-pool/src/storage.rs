@@ -16,12 +16,6 @@ pub fn has_borrower(env: &Env, borrower: &Address) -> bool {
         .has(&DataKey::Borrower(borrower.clone()))
 }
 
-pub fn has_loan(env: &Env, borrower: &Address) -> bool {
-    env.storage()
-        .persistent()
-        .has(&DataKey::Loan(borrower.clone()))
-}
-
 pub fn has_lender(env: &Env, lender: &Address) -> bool {
     env.storage()
         .persistent()
@@ -42,10 +36,11 @@ pub fn read_contributions(env: &Env) -> Vec<Address> {
         .unwrap_or(Vec::new(env))
 }
 
-pub fn read_loan(env: &Env, borrower: &Address) -> Option<Loan> {
+pub fn read_loans(env: &Env, borrower: &Address) -> Vec<Loan> {
     env.storage()
         .persistent()
         .get(&DataKey::Loan(borrower.clone()))
+        .unwrap_or(Vec::new(env))
 }
 
 pub fn read_lender(env: &Env, lender: &Address) -> i128 {
@@ -63,12 +58,6 @@ pub fn remove_borrower(env: &Env, borrower: &Address) {
     env.storage()
         .persistent()
         .remove(&DataKey::Borrower(borrower.clone()))
-}
-
-pub fn remove_loan(env: &Env, borrower: &Address) {
-    env.storage()
-        .persistent()
-        .remove(&DataKey::Loan(borrower.clone()))
 }
 
 pub fn remove_lender(env: &Env, lender: &Address) {
@@ -103,10 +92,10 @@ pub fn write_contract_balance(env: &Env, amount: &i128) {
         .set(&DataKey::TotalBalance, amount);
 }
 
-pub fn write_loan(env: &Env, borrower: &Address, loan: &Loan) {
+pub fn write_loans(env: &Env, borrower: &Address, loans: &Vec<Loan>) {
     env.storage()
         .persistent()
-        .set(&DataKey::Loan(borrower.clone()), loan);
+        .set(&DataKey::Loan(borrower.clone()), loans);
 }
 
 pub fn write_lender(env: &Env, lender: &Address, amount: &i128) {

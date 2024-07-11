@@ -1,8 +1,8 @@
 #![cfg(test)]
 
 use crate::storage::{
-    has_borrower, has_lender, has_loan, read_admin, read_contract_balance, read_contributions,
-    read_lender, read_loan, read_token,
+    has_borrower, has_lender, read_admin, read_contract_balance, read_contributions, read_lender,
+    read_loans, read_token,
 };
 use crate::LiquidityPoolContractClient;
 use soroban_sdk::{
@@ -108,9 +108,11 @@ impl LiquidityPoolContract {
             .as_contract(&self.contract_id, || has_borrower(&self.env, borrower))
     }
 
-    pub fn has_loan(&self, borrower: &Address) -> bool {
-        self.env
-            .as_contract(&self.contract_id, || has_loan(&self.env, borrower))
+    pub fn has_loan(&self, borrower: &Address, loan_id: u64) -> bool {
+        self.env.as_contract(&self.contract_id, || {
+            let loans = read_loans(&self.env, borrower);
+            loans.iter().any(|loan| loan.id == loan_id)
+        })
     }
 
     pub fn has_lender(&self, lender: &Address) -> bool {
@@ -128,9 +130,11 @@ impl LiquidityPoolContract {
             .as_contract(&self.contract_id, || read_contract_balance(&self.env))
     }
 
-    pub fn read_loan_amount(&self, borrower: &Address) -> i128 {
+    pub fn read_loan_amount(&self, borrower: &Address, loan_id: u64) -> i128 {
         self.env.as_contract(&self.contract_id, || {
-            let loan = read_loan(&self.env, borrower).unwrap();
+            let loans = read_loans(&self.env, borrower);
+            let loan = loans.iter().find(|loan| loan.id == loan_id).unwrap();
+
             loan.amount
         })
     }
