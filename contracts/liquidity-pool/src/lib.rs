@@ -201,8 +201,6 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
     }
 
     fn repay_loan_amount(env: Env, borrower: Address) -> i128 {
-        borrower.require_auth();
-
         assert!(has_borrower(&env, &borrower), "borrower is not registered");
 
         let loan = match read_loan(&env, &borrower) {
@@ -213,12 +211,9 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         loan.amount + calculate_fees(&env, &loan)
     }
 
-    fn add_borrower(env: Env, admin: Address, borrower: Address) {
-        assert_eq!(
-            read_admin(&env),
-            admin,
-            "only the stored admin can add borrowers"
-        );
+    fn add_borrower(env: Env, borrower: Address) {
+        let admin = read_admin(&env);
+        admin.require_auth();
 
         assert!(
             !has_borrower(&env, &borrower),
@@ -228,35 +223,28 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_borrower(&env, &borrower, false);
     }
 
-    fn remove_borrower(env: Env, admin: Address, borrower: Address) {
-        assert_eq!(
-            read_admin(&env),
-            admin,
-            "only the stored admin can add borrowers"
-        );
+    fn remove_borrower(env: Env, borrower: Address) {
+        let admin = read_admin(&env);
+        admin.require_auth();
 
         assert!(has_borrower(&env, &borrower), "borrower is not registered");
 
         remove_borrower(&env, &borrower);
     }
 
-    fn add_lender(env: Env, admin: Address, lender: Address) {
-        assert_eq!(
-            read_admin(&env),
-            admin,
-            "only the stored admin can add lenders"
-        );
+    fn add_lender(env: Env, lender: Address) {
+        let admin = read_admin(&env);
+        admin.require_auth();
+
         assert!(!has_lender(&env, &lender), "lender is already registered");
 
         write_lender(&env, &lender, &0i128);
     }
 
-    fn remove_lender(env: Env, admin: Address, lender: Address) {
-        assert_eq!(
-            read_admin(&env),
-            admin,
-            "only the stored admin can add lenders"
-        );
+    fn remove_lender(env: Env, lender: Address) {
+        let admin = read_admin(&env);
+        admin.require_auth();
+
         assert!(has_lender(&env, &lender), "lender is not registered");
 
         remove_lender(&env, &lender);
