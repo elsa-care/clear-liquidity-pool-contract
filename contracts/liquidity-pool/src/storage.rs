@@ -2,6 +2,11 @@ use soroban_sdk::{Address, Env, Vec};
 
 use crate::types::{DataKey, Loan};
 
+pub fn check_admin(env: &Env) {
+    let admin = read_admin(env);
+    admin.require_auth();
+}
+
 pub fn has_admin(env: &Env) -> bool {
     env.storage().persistent().has(&DataKey::Admin)
 }
