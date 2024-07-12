@@ -1,16 +1,18 @@
 #![no_std]
 
+mod errors;
 mod interface;
 mod percentage;
 mod storage;
 mod testutils;
 mod types;
 
+use crate::errors::LPError;
 use crate::interface::LiquidityPoolTrait;
 use crate::percentage::{calculate_repayment_amount, process_lender_contribution};
 use crate::storage::{
-    has_admin, has_borrower, has_lender, read_admin, read_contract_balance, read_contributions,
-    read_lender, read_loans, read_token, remove_borrower, remove_lender,
+    check_admin, has_admin, has_borrower, has_lender, read_admin, read_contract_balance,
+    read_contributions, read_lender, read_loans, read_token, remove_borrower, remove_lender,
     remove_lender_contribution, write_admin, write_borrower, write_contract_balance, write_lender,
     write_lender_contribution, write_loans, write_token,
 };
@@ -48,6 +50,14 @@ fn generate_id(env: &Env, loans: &Vec<Loan>) -> u64 {
     }
 }
 
+fn check_nonnegative_amount(amount: i128) -> Result<(), LPError> {
+    if amount < 0 {
+        return Err(LPError::AmountMustBePositive);
+    }
+
+    Ok(())
+}
+
 contractmeta!(
     key = "Description",
     val = "Liquidity pool for loans with a daily fee of 0.1%"
@@ -58,34 +68,37 @@ pub struct LiquidityPoolContract;
 
 #[contractimpl]
 impl LiquidityPoolTrait for LiquidityPoolContract {
-    fn initialize(env: Env, admin: Address, token: Address) {
-        assert!(
-            !has_admin(&env),
-            "contract already initialized with an admin"
-        );
+    fn initialize(env: Env, admin: Address, token: Address) -> Result<(), LPError> {
+        if has_admin(&env) {
+            return Err(LPError::AlreadyInitialized);
+        }
 
         write_admin(&env, &admin);
         write_token(&env, &token);
         write_contract_balance(&env, &0i128);
+
+        Ok(())
     }
 
-    fn balance(env: Env, address: Address) -> i128 {
+    fn balance(env: Env, address: Address) -> Result<i128, LPError> {
         if address == read_admin(&env) {
-            return read_contract_balance(&env);
+            return Ok(read_contract_balance(&env));
         };
 
         if has_lender(&env, &address) {
-            return read_lender(&env, &address);
+            return Ok(read_lender(&env, &address));
         }
 
-        panic!("address is not registered");
+        Err(LPError::AddressNotRegistered)
     }
 
-    fn deposit(env: Env, lender: Address, amount: i128) {
+    fn deposit(env: Env, lender: Address, amount: i128) -> Result<(), LPError> {
         lender.require_auth();
 
-        assert!(has_lender(&env, &lender), "lender is not registered");
-        assert!(amount > 0, "amount must be positive");
+        check_nonnegative_amount(amount)?;
+        if !has_lender(&env, &lender) {
+            return Err(LPError::LenderNotRegistered);
+        }
 
         token_transfer(&env, &lender, &env.current_contract_address(), &amount);
 
@@ -104,22 +117,29 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             contributions.push_back(lender);
             write_lender_contribution(&env, contributions);
         }
+
+        Ok(())
     }
 
-    fn withdraw(env: Env, lender: Address, amount: i128) {
+    fn withdraw(env: Env, lender: Address, amount: i128) -> Result<(), LPError> {
         lender.require_auth();
 
-        assert!(has_lender(&env, &lender), "lender is not registered");
+        if !has_lender(&env, &lender) {
+            return Err(LPError::LenderNotRegistered);
+        }
 
         let mut total_balance = read_contract_balance(&env);
         let mut lender_balance = read_lender(&env, &lender);
 
-        assert!(amount > 0, "amount must be positive");
-        assert!(
-            lender_balance >= amount,
-            "balance not available for the amount requested"
-        );
-        assert!(total_balance >= amount, "balance currently unavailable");
+        check_nonnegative_amount(amount)?;
+
+        if amount > lender_balance {
+            return Err(LPError::InsufficientBalance);
+        }
+
+        if amount > total_balance {
+            return Err(LPError::BalanceNotAvailableForAmountRequested);
+        }
 
         token_transfer(&env, &env.current_contract_address(), &lender, &amount);
 
@@ -132,20 +152,23 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         if lender_balance <= 0 {
             remove_lender_contribution(&env, &lender);
         }
+
+        Ok(())
     }
 
-    fn loan(env: Env, borrower: Address, amount: i128) -> u64 {
+    fn loan(env: Env, borrower: Address, amount: i128) -> Result<u64, LPError> {
         borrower.require_auth();
 
-        assert!(amount > 0, "amount must be positive");
-        assert!(has_borrower(&env, &borrower), "borrower is not registered");
+        check_nonnegative_amount(amount)?;
+        if !has_borrower(&env, &borrower) {
+            return Err(LPError::BorrowerNotRegistered);
+        }
 
         let total_balance = read_contract_balance(&env);
 
-        assert!(
-            total_balance >= amount,
-            "balance not available for the amount requested"
-        );
+        if amount > total_balance {
+            return Err(LPError::BalanceNotAvailableForAmountRequested);
+        }
 
         token_transfer(&env, &env.current_contract_address(), &borrower, &amount);
 
@@ -174,14 +197,17 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_loans(&env, &borrower, &loans);
         write_borrower(&env, &borrower, true);
 
-        new_loan.id
+        Ok(new_loan.id)
     }
 
-    fn repay_loan(env: Env, borrower: Address, loan_id: u64, amount: i128) {
+    fn repay_loan(env: Env, borrower: Address, loan_id: u64, amount: i128) -> Result<(), LPError> {
         borrower.require_auth();
 
-        assert!(amount > 0, "amount must be positive");
-        assert!(has_borrower(&env, &borrower), "borrower is not registered");
+        check_nonnegative_amount(amount)?;
+
+        if !has_borrower(&env, &borrower) {
+            return Err(LPError::BorrowerNotRegistered);
+        }
 
         let mut loans = read_loans(&env, &borrower);
         let (loan_index, mut loan) = loans
@@ -189,7 +215,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             .enumerate()
             .find(|(_, loan)| loan.id == loan_id)
             .map(|(index, loan)| (index, loan.clone()))
-            .expect("borrower's loan was not found or exists");
+            .ok_or(LPError::LoanNotFoundOrExists)?;
 
         token_transfer(&env, &borrower, &env.current_contract_address(), &amount);
 
@@ -213,60 +239,68 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         write_loans(&env, &borrower, &loans);
         write_contract_balance(&env, &total_balance);
+        Ok(())
     }
 
-    fn repay_loan_amount(env: Env, borrower: Address, loan_id: u64) -> i128 {
+    fn repay_loan_amount(env: Env, borrower: Address, loan_id: u64) -> Result<i128, LPError> {
         borrower.require_auth();
-      
-        assert!(has_borrower(&env, &borrower), "borrower is not registered");
+
+        if !has_borrower(&env, &borrower) {
+            return Err(LPError::BorrowerNotRegistered);
+        }
 
         let loans = read_loans(&env, &borrower);
         let loan = loans
             .iter()
             .find(|loan| loan.id == loan_id)
-            .expect("borrower's loan was not found or exists");
+            .ok_or(LPError::LoanNotFoundOrExists)?;
 
-        loan.amount + calculate_fees(&env, &loan)
+        Ok(loan.amount + calculate_fees(&env, &loan))
     }
 
-    fn add_borrower(env: Env, borrower: Address) {
-        let admin = read_admin(&env);
-        admin.require_auth();
+    fn add_borrower(env: Env, borrower: Address) -> Result<(), LPError> {
+        check_admin(&env);
 
-        assert!(
-            !has_borrower(&env, &borrower),
-            "borrower is already registered"
-        );
+        if has_borrower(&env, &borrower) {
+            return Err(LPError::BorrowerAlreadyRegistered);
+        }
 
         write_borrower(&env, &borrower, false);
+        Ok(())
     }
 
-    fn remove_borrower(env: Env, borrower: Address) {
-        let admin = read_admin(&env);
-        admin.require_auth();
+    fn remove_borrower(env: Env, borrower: Address) -> Result<(), LPError> {
+        check_admin(&env);
 
-        assert!(has_borrower(&env, &borrower), "borrower is not registered");
+        if !has_borrower(&env, &borrower) {
+            return Err(LPError::BorrowerNotRegistered);
+        }
 
         remove_borrower(&env, &borrower);
+        Ok(())
     }
 
-    fn add_lender(env: Env, lender: Address) {
-        let admin = read_admin(&env);
-        admin.require_auth();
+    fn add_lender(env: Env, lender: Address) -> Result<(), LPError> {
+        check_admin(&env);
 
-        assert!(!has_lender(&env, &lender), "lender is already registered");
+        if has_lender(&env, &lender) {
+            return Err(LPError::LenderAlreadyRegistered);
+        }
 
         write_lender(&env, &lender, &0i128);
+        Ok(())
     }
 
-    fn remove_lender(env: Env, lender: Address) {
-        let admin = read_admin(&env);
-        admin.require_auth();
+    fn remove_lender(env: Env, lender: Address) -> Result<(), LPError> {
+        check_admin(&env);
 
-        assert!(has_lender(&env, &lender), "lender is not registered");
+        if !has_lender(&env, &lender) {
+            return Err(LPError::LenderNotRegistered);
+        }
 
         remove_lender(&env, &lender);
         remove_lender_contribution(&env, &lender);
+        Ok(())
     }
 }
 
