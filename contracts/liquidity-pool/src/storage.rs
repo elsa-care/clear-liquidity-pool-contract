@@ -1,13 +1,25 @@
 use soroban_sdk::{Address, Env, Vec};
 
-use crate::types::{DataKey, Loan};
+use crate::{
+    errors::LPError,
+    types::{DataKey, Loan},
+};
+
+pub fn check_admin(env: &Env) -> Result<(), LPError> {
+    let admin = read_admin(env)?;
+    admin.require_auth();
+    Ok(())
+}
 
 pub fn has_admin(env: &Env) -> bool {
     env.storage().persistent().has(&DataKey::Admin)
 }
 
-pub fn read_admin(env: &Env) -> Address {
-    env.storage().persistent().get(&DataKey::Admin).unwrap()
+pub fn read_admin(env: &Env) -> Result<Address, LPError> {
+    match env.storage().persistent().get(&DataKey::Admin) {
+        Some(admin) => Ok(admin),
+        None => Err(LPError::AdminNotFound),
+    }
 }
 
 pub fn has_borrower(env: &Env, borrower: &Address) -> bool {
@@ -50,8 +62,11 @@ pub fn read_lender(env: &Env, lender: &Address) -> i128 {
         .unwrap_or(0)
 }
 
-pub fn read_token(env: &Env) -> Address {
-    env.storage().persistent().get(&DataKey::Token).unwrap()
+pub fn read_token(env: &Env) -> Result<Address, LPError> {
+    match env.storage().persistent().get(&DataKey::Token) {
+        Some(token) => Ok(token),
+        None => Err(LPError::TokenNotFound),
+    }
 }
 
 pub fn remove_borrower(env: &Env, borrower: &Address) {
@@ -66,14 +81,18 @@ pub fn remove_lender(env: &Env, lender: &Address) {
         .remove(&DataKey::Lender(lender.clone()))
 }
 
-pub fn remove_lender_contribution(env: &Env, lender: &Address) {
+pub fn remove_lender_contribution(env: &Env, lender: &Address) -> Result<(), LPError> {
     let mut contributions = read_contributions(env);
 
     if let Some(index) = contributions.iter().position(|address| &address == lender) {
-        contributions.remove(index.try_into().unwrap());
+        match index.try_into() {
+            Ok(valid_index) => contributions.remove(valid_index),
+            Err(_) => return Err(LPError::LenderNotFoundInContributions),
+        };
     }
 
     write_lender_contribution(env, contributions);
+    Ok(())
 }
 
 pub fn write_admin(env: &Env, admin: &Address) {
