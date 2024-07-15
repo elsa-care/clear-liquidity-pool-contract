@@ -6,9 +6,9 @@ use crate::storage::{
 };
 use crate::LiquidityPoolContractClient;
 use soroban_sdk::{
-    testutils::{Address as _, Ledger},
+    testutils::{Address as _, Events, Ledger},
     token::{self, StellarAssetClient},
-    Address, Env,
+    vec, Address, Env, Val, Vec,
 };
 
 pub fn set_timestamp_for_20_days(env: &Env) {
@@ -96,6 +96,19 @@ impl LiquidityPoolContract {
             env: env.clone(),
             contract_id,
         }
+    }
+
+    pub fn get_contract_events(&self) -> Vec<(Address, Vec<Val>, Val)> {
+        let mut contract_events = vec![&self.env];
+
+        self.env
+            .events()
+            .all()
+            .iter()
+            .filter(|event| event.0 == self.contract_id)
+            .for_each(|event| contract_events.push_back(event));
+
+        contract_events
     }
 
     pub fn read_admin(&self) -> Address {

@@ -4,16 +4,33 @@ extern crate std;
 use super::testutils::{create_token_contract, set_timestamp_for_20_days, Setup};
 use soroban_sdk::{
     testutils::{Address as _, MockAuth, MockAuthInvoke},
-    Address, Env, IntoVal,
+    vec, Address, Env, IntoVal, Symbol,
 };
 
 #[test]
 fn test_initialize() {
     let setup = Setup::new();
+    let contract_events = setup.liquid_contract.get_contract_events();
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
     assert_eq!(setup.liquid_contract.read_admin(), setup.admin);
     assert_eq!(setup.liquid_contract.read_token(), setup.token.address);
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            )
+        ]
+    );
 }
 
 #[test]
@@ -103,12 +120,68 @@ fn test_deposit() {
         .mock_all_auths()
         .deposit(&lender2, &7i128);
 
+    let contract_events = setup.liquid_contract.get_contract_events();
+
     assert_eq!(setup.liquid_contract.read_contract_balance(), 11i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender1), 4i128);
     assert!(setup.liquid_contract.is_lender_in_contributions(&lender1));
 
     assert_eq!(setup.liquid_contract.read_lender(&lender2), 7i128);
     assert!(setup.liquid_contract.is_lender_in_contributions(&lender2));
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender1.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender2.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "deposit").as_val(),
+                    lender1.into_val(&setup.env),
+                ],
+                4i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "deposit").as_val(),
+                    lender2.into_val(&setup.env),
+                ],
+                7i128.into_val(&setup.env)
+            )
+        ]
+    );
 }
 
 #[test]
@@ -196,11 +269,85 @@ fn test_withdraw() {
         .mock_all_auths()
         .withdraw(&lender2, &7i128);
 
+    let contract_events = setup.liquid_contract.get_contract_events();
+
     assert_eq!(setup.liquid_contract.read_contract_balance(), 8i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender1), 5i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender2), 3i128);
     assert!(setup.liquid_contract.is_lender_in_contributions(&lender1));
     assert!(setup.liquid_contract.is_lender_in_contributions(&lender2));
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender1.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender2.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "deposit").as_val(),
+                    lender1.into_val(&setup.env),
+                ],
+                10i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "deposit").as_val(),
+                    lender2.into_val(&setup.env),
+                ],
+                10i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "withdraw").as_val(),
+                    lender1.into_val(&setup.env),
+                ],
+                5i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "withdraw").as_val(),
+                    lender2.into_val(&setup.env),
+                ],
+                7i128.into_val(&setup.env)
+            )
+        ]
+    );
 }
 
 #[test]
@@ -359,10 +506,86 @@ fn test_loan() {
         .mock_all_auths()
         .loan(&borrower, &10i128);
 
+    let contract_events = setup.liquid_contract.get_contract_events();
+
     assert_eq!(setup.liquid_contract.read_contract_balance(), 10i128);
     assert!(setup.liquid_contract.has_loan(&borrower, loan_id));
     assert_eq!(setup.liquid_contract.read_lender(&lender1), 5i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender2), 5i128);
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender1.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender2.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "deposit").as_val(),
+                    lender1.into_val(&setup.env),
+                ],
+                10i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "deposit").as_val(),
+                    lender2.into_val(&setup.env),
+                ],
+                10i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_borrower").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    borrower.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "loan").as_val(),
+                    borrower.into_val(&setup.env),
+                    loan_id.into_val(&setup.env),
+                ],
+                10i128.into_val(&setup.env)
+            )
+        ]
+    );
 }
 
 #[test]
@@ -440,8 +663,75 @@ fn test_request_two_loans() {
         .mock_all_auths()
         .loan(&borrower, &10i128);
 
+    let contract_events = setup.liquid_contract.get_contract_events();
+
     assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
     assert!(setup.liquid_contract.has_loan(&borrower, second_loan_id));
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "deposit").as_val(),
+                    lender.into_val(&setup.env),
+                ],
+                20i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_borrower").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    borrower.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "loan").as_val(),
+                    borrower.into_val(&setup.env),
+                    first_loan_id.into_val(&setup.env),
+                ],
+                10i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "loan").as_val(),
+                    borrower.into_val(&setup.env),
+                    second_loan_id.into_val(&setup.env),
+                ],
+                10i128.into_val(&setup.env)
+            )
+        ]
+    );
 }
 
 #[test]
@@ -514,10 +804,96 @@ fn test_repay_loan_with_repayment_total_amount() {
         .mock_all_auths()
         .repay_loan(&borrower, &loan_id, &1002i128);
 
+    let contract_events = setup.liquid_contract.get_contract_events();
+
     assert_eq!(setup.liquid_contract.read_contract_balance(), 1002i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender1), 501i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender2), 501i128);
     assert!(!setup.liquid_contract.has_loan(&borrower, loan_id));
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender1.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender2.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "deposit").as_val(),
+                    lender1.into_val(&setup.env),
+                ],
+                500i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "deposit").as_val(),
+                    lender2.into_val(&setup.env),
+                ],
+                500i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_borrower").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    borrower.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "loan").as_val(),
+                    borrower.into_val(&setup.env),
+                    loan_id.into_val(&setup.env),
+                ],
+                1000i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "repay_loan").as_val(),
+                    borrower.into_val(&setup.env),
+                    loan_id.into_val(&setup.env),
+                ],
+                1002i128.into_val(&setup.env)
+            )
+        ]
+    );
 }
 
 #[test]
@@ -590,6 +966,8 @@ fn test_repay_loan_without_repayment_total_amount() {
         .mock_all_auths()
         .repay_loan(&borrower, &loan_id, &1000i128);
 
+    let contract_events = setup.liquid_contract.get_contract_events();
+
     assert_eq!(setup.liquid_contract.read_contract_balance(), 1000i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender1), 500i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender2), 500i128);
@@ -597,6 +975,91 @@ fn test_repay_loan_without_repayment_total_amount() {
     assert_eq!(
         setup.liquid_contract.read_loan_amount(&borrower, loan_id),
         2i128
+    );
+
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender1.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender2.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "deposit").as_val(),
+                    lender1.into_val(&setup.env),
+                ],
+                500i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "deposit").as_val(),
+                    lender2.into_val(&setup.env),
+                ],
+                500i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_borrower").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    borrower.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "loan").as_val(),
+                    borrower.into_val(&setup.env),
+                    loan_id.into_val(&setup.env),
+                ],
+                1000i128.into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "repay_loan").as_val(),
+                    borrower.into_val(&setup.env),
+                    loan_id.into_val(&setup.env),
+                ],
+                1000i128.into_val(&setup.env)
+            )
+        ]
     );
 }
 
@@ -741,7 +1204,35 @@ fn test_add_borrower() {
         }])
         .add_borrower(&borrower);
 
+    let contract_events = setup.liquid_contract.get_contract_events();
+
     assert!(setup.liquid_contract.has_borrower(&borrower));
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_borrower").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    borrower.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            )
+        ]
+    );
 }
 
 #[test]
@@ -813,7 +1304,45 @@ fn test_remove_borrower() {
         }])
         .remove_borrower(&borrower);
 
+    let contract_events = setup.liquid_contract.get_contract_events();
+
     assert!(!setup.liquid_contract.has_borrower(&borrower));
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_borrower").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    borrower.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "remove_borrower").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    borrower.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            )
+        ]
+    );
 }
 
 #[test]
@@ -878,7 +1407,35 @@ fn test_add_lender() {
         }])
         .add_lender(&lender);
 
+    let contract_events = setup.liquid_contract.get_contract_events();
+
     assert!(setup.liquid_contract.has_lender(&lender));
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            )
+        ]
+    );
 }
 
 #[test]
@@ -951,7 +1508,45 @@ fn test_remove_lender() {
         }])
         .remove_lender(&lender);
 
+    let contract_events = setup.liquid_contract.get_contract_events();
+
     assert!(!setup.liquid_contract.has_lender(&lender));
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "remove_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            )
+        ]
+    );
 }
 
 #[test]
