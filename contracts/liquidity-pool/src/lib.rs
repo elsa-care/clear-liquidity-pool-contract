@@ -1,5 +1,6 @@
 #![no_std]
 
+mod event;
 mod interface;
 mod percentage;
 mod storage;
@@ -67,6 +68,8 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_admin(&env, &admin);
         write_token(&env, &token);
         write_contract_balance(&env, &0i128);
+
+        event::initialize(&env, admin, token);
     }
 
     fn balance(env: Env, address: Address) -> i128 {
@@ -101,9 +104,11 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         let mut contributions = read_contributions(&env);
 
         if !contributions.contains(lender.clone()) {
-            contributions.push_back(lender);
+            contributions.push_back(lender.clone());
             write_lender_contribution(&env, contributions);
         }
+
+        event::deposit(&env, lender, amount);
     }
 
     fn withdraw(env: Env, lender: Address, amount: i128) {
@@ -132,6 +137,8 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         if lender_balance <= 0 {
             remove_lender_contribution(&env, &lender);
         }
+
+        event::withdraw(&env, lender, amount);
     }
 
     fn loan(env: Env, borrower: Address, amount: i128) -> u64 {
@@ -174,6 +181,8 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_loans(&env, &borrower, &loans);
         write_borrower(&env, &borrower, true);
 
+        event::loan(&env, borrower, new_loan.id, amount);
+
         new_loan.id
     }
 
@@ -213,11 +222,13 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         write_loans(&env, &borrower, &loans);
         write_contract_balance(&env, &total_balance);
+
+        event::repay_loan(&env, borrower, loan_id, amount);
     }
 
     fn repay_loan_amount(env: Env, borrower: Address, loan_id: u64) -> i128 {
         borrower.require_auth();
-      
+
         assert!(has_borrower(&env, &borrower), "borrower is not registered");
 
         let loans = read_loans(&env, &borrower);
@@ -239,6 +250,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         );
 
         write_borrower(&env, &borrower, false);
+        event::add_borrower(&env, admin, borrower);
     }
 
     fn remove_borrower(env: Env, borrower: Address) {
@@ -248,6 +260,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         assert!(has_borrower(&env, &borrower), "borrower is not registered");
 
         remove_borrower(&env, &borrower);
+        event::remove_borrower(&env, admin, borrower);
     }
 
     fn add_lender(env: Env, lender: Address) {
@@ -257,6 +270,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         assert!(!has_lender(&env, &lender), "lender is already registered");
 
         write_lender(&env, &lender, &0i128);
+        event::add_lender(&env, admin, lender);
     }
 
     fn remove_lender(env: Env, lender: Address) {
@@ -267,6 +281,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         remove_lender(&env, &lender);
         remove_lender_contribution(&env, &lender);
+        event::remove_lender(&env, admin, lender);
     }
 }
 
