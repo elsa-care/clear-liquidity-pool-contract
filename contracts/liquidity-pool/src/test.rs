@@ -512,7 +512,7 @@ fn test_repay_loan_with_repayment_total_amount() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .repay_loan(&borrower, &loan_id, &12i128);
+        .repay_loan(&borrower, &loan_id, &1002i128);
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 1002i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender1), 501i128);
@@ -588,13 +588,16 @@ fn test_repay_loan_without_repayment_total_amount() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .repay_loan(&borrower, &loan_id, &10i128);
+        .repay_loan(&borrower, &loan_id, &1000i128);
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 1000i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender1), 500i128);
     assert_eq!(setup.liquid_contract.read_lender(&lender2), 500i128);
     assert!(setup.liquid_contract.has_loan(&borrower, loan_id));
-    assert_eq!(setup.liquid_contract.read_loan_amount(&borrower, loan_id), 2i128);
+    assert_eq!(
+        setup.liquid_contract.read_loan_amount(&borrower, loan_id),
+        2i128
+    );
 }
 
 #[test]
@@ -708,12 +711,14 @@ fn test_repay_loan_amount_without_borrower() {
 #[should_panic(expected = "borrower's loan was not found or exists")]
 fn test_repay_loan_amount_without_active_loan() {
     let setup = Setup::new();
+    setup.env.mock_all_auths();
     let borrower = Address::generate(&setup.env);
+
+    setup.liquid_contract.client().add_borrower(&borrower);
 
     setup
         .liquid_contract
         .client()
-        .mock_all_auths()
         .repay_loan_amount(&borrower, &1u64);
 }
 
