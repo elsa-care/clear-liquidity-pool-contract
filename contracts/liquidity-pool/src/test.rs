@@ -976,6 +976,7 @@ fn test_repay_loan_without_repayment_total_amount() {
         setup.liquid_contract.read_loan_amount(&borrower, loan_id),
         2i128
     );
+
     assert_eq!(
         contract_events,
         vec![
