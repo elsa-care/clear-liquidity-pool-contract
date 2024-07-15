@@ -1,7 +1,7 @@
 #![no_std]
 
-mod event;
 mod errors;
+mod event;
 mod interface;
 mod percentage;
 mod storage;
@@ -83,7 +83,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
     }
 
     fn balance(env: Env, address: Address) -> Result<i128, LPError> {
-        if address == read_admin(&env) {
+        if address == read_admin(&env)? {
             return Ok(read_contract_balance(&env));
         };
 
@@ -202,7 +202,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_borrower(&env, &borrower, true);
 
         event::loan(&env, borrower, new_loan.id, amount);
-       Ok(new_loan.id)
+        Ok(new_loan.id)
     }
 
     fn repay_loan(env: Env, borrower: Address, loan_id: u64, amount: i128) -> Result<(), LPError> {
@@ -245,7 +245,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_loans(&env, &borrower, &loans);
         write_contract_balance(&env, &total_balance);
 
-      event::repay_loan(&env, borrower, loan_id, amount);
+        event::repay_loan(&env, borrower, loan_id, amount);
         Ok(())
     }
 
@@ -266,7 +266,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
     }
 
     fn add_borrower(env: Env, borrower: Address) -> Result<(), LPError> {
-        check_admin(&env);
+        let admin = check_admin(&env)?;
 
         if has_borrower(&env, &borrower) {
             return Err(LPError::BorrowerAlreadyRegistered);
@@ -274,12 +274,12 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         write_borrower(&env, &borrower, false);
 
-       event::add_borrower(&env, admin, borrower);
+        event::add_borrower(&env, admin, borrower);
         Ok(())
     }
 
     fn remove_borrower(env: Env, borrower: Address) -> Result<(), LPError> {
-        check_admin(&env);
+        let admin = check_admin(&env)?;
 
         if !has_borrower(&env, &borrower) {
             return Err(LPError::BorrowerNotRegistered);
@@ -292,20 +292,20 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
     }
 
     fn add_lender(env: Env, lender: Address) -> Result<(), LPError> {
-        check_admin(&env);
+        let admin = check_admin(&env)?;
 
         if has_lender(&env, &lender) {
             return Err(LPError::LenderAlreadyRegistered);
         }
 
         write_lender(&env, &lender, &0i128);
-    
-       event::add_lender(&env, admin, lender);
+
+        event::add_lender(&env, admin, lender);
         Ok(())
     }
 
     fn remove_lender(env: Env, lender: Address) -> Result<(), LPError> {
-        check_admin(&env);
+        let admin = check_admin(&env)?;
 
         if !has_lender(&env, &lender) {
             return Err(LPError::LenderNotRegistered);

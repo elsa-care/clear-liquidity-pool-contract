@@ -14,4 +14,5 @@ pub enum LPError {
     LoanNotFoundOrExists = 8,
     LenderAlreadyRegistered = 9,
     LenderNotRegistered = 10,
+    AdminNotFound = 11,
 }

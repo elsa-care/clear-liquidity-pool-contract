@@ -13,7 +13,7 @@ fn test_initialize() {
     let contract_events = setup.liquid_contract.get_contract_events();
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
-    assert_eq!(setup.liquid_contract.read_admin(), setup.admin);
+    assert_eq!(setup.liquid_contract.read_admin(), Ok(setup.admin.clone()));
     assert_eq!(setup.liquid_contract.read_token(), setup.token.address);
     assert_eq!(
         contract_events,

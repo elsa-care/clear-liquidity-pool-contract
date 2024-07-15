@@ -1,18 +1,25 @@
 use soroban_sdk::{Address, Env, Vec};
 
-use crate::types::{DataKey, Loan};
+use crate::{
+    errors::LPError,
+    types::{DataKey, Loan},
+};
 
-pub fn check_admin(env: &Env) {
-    let admin = read_admin(env);
+pub fn check_admin(env: &Env) -> Result<Address, LPError> {
+    let admin = read_admin(env)?;
     admin.require_auth();
+    Ok(admin)
 }
 
 pub fn has_admin(env: &Env) -> bool {
     env.storage().persistent().has(&DataKey::Admin)
 }
 
-pub fn read_admin(env: &Env) -> Address {
-    env.storage().persistent().get(&DataKey::Admin).unwrap()
+pub fn read_admin(env: &Env) -> Result<Address, LPError> {
+    match env.storage().persistent().get(&DataKey::Admin) {
+        Some(admin) => Ok(admin),
+        None => Err(LPError::AdminNotFound),
+    }
 }
 
 pub fn has_borrower(env: &Env, borrower: &Address) -> bool {
