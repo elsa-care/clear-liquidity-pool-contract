@@ -13,7 +13,7 @@ fn test_initialize() {
     let contract_events = setup.liquid_contract.get_contract_events();
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
-    assert_eq!(setup.liquid_contract.read_admin(), setup.admin);
+    assert_eq!(setup.liquid_contract.read_admin(), Ok(setup.admin.clone()));
     assert_eq!(setup.liquid_contract.read_token(), setup.token.address);
     assert_eq!(
         contract_events,
@@ -34,7 +34,7 @@ fn test_initialize() {
 }
 
 #[test]
-#[should_panic(expected = "contract already initialized with an admin")]
+#[should_panic(expected = "Error(Contract, #1)")]
 fn test_already_initialize() {
     let setup = Setup::new();
 
@@ -75,7 +75,7 @@ fn test_balance_with_lender() {
 }
 
 #[test]
-#[should_panic(expected = "address is not registered")]
+#[should_panic(expected = "Error(Contract, #3)")]
 fn test_balance_without_registered_address() {
     let setup = Setup::new();
 
@@ -185,7 +185,7 @@ fn test_deposit() {
 }
 
 #[test]
-#[should_panic(expected = "lender is not registered")]
+#[should_panic(expected = "Error(Contract, #10)")]
 fn test_deposit_without_lender() {
     let setup = Setup::new();
     let lender = Address::generate(&setup.env);
@@ -198,7 +198,7 @@ fn test_deposit_without_lender() {
 }
 
 #[test]
-#[should_panic(expected = "amount must be positive")]
+#[should_panic(expected = "Error(Contract, #2)")]
 fn test_deposit_with_negative_amount() {
     let setup = Setup::new();
     let lender = Address::generate(&setup.env);
@@ -388,7 +388,7 @@ fn test_withdraw_by_remove_contribution() {
 }
 
 #[test]
-#[should_panic(expected = "lender is not registered")]
+#[should_panic(expected = "Error(Contract, #10)")]
 fn test_withdraw_without_lender() {
     let setup = Setup::new();
     let lender = Address::generate(&setup.env);
@@ -401,7 +401,7 @@ fn test_withdraw_without_lender() {
 }
 
 #[test]
-#[should_panic(expected = "amount must be positive")]
+#[should_panic(expected = "Error(Contract, #2)")]
 fn test_withdraw_negative_amount() {
     let setup = Setup::new();
     let lender = Address::generate(&setup.env);
@@ -428,7 +428,7 @@ fn test_withdraw_negative_amount() {
 }
 
 #[test]
-#[should_panic(expected = "balance not available for the amount requested")]
+#[should_panic(expected = "Error(Contract, #7)")]
 fn test_withdraw_amount_greater_lender_balance() {
     let setup = Setup::new();
     let lender = Address::generate(&setup.env);
@@ -589,7 +589,7 @@ fn test_loan() {
 }
 
 #[test]
-#[should_panic(expected = "amount must be positive")]
+#[should_panic(expected = "Error(Contract, #2)")]
 fn test_loan_negative_amount() {
     let setup = Setup::new();
     let borrower = Address::generate(&setup.env);
@@ -608,7 +608,7 @@ fn test_loan_negative_amount() {
 }
 
 #[test]
-#[should_panic(expected = "borrower is not registered")]
+#[should_panic(expected = "Error(Contract, #6)")]
 fn test_loan_without_borrower() {
     let setup = Setup::new();
     let borrower = Address::generate(&setup.env);
@@ -1064,7 +1064,7 @@ fn test_repay_loan_without_repayment_total_amount() {
 }
 
 #[test]
-#[should_panic(expected = "amount must be positive")]
+#[should_panic(expected = "Error(Contract, #2)")]
 fn test_repay_loan_negative_amount() {
     let setup = Setup::new();
     let borrower = Address::generate(&setup.env);
@@ -1083,7 +1083,7 @@ fn test_repay_loan_negative_amount() {
 }
 
 #[test]
-#[should_panic(expected = "borrower is not registered")]
+#[should_panic(expected = "Error(Contract, #6)")]
 fn test_repay_loan_without_borrower() {
     let setup = Setup::new();
     let borrower = Address::generate(&setup.env);
@@ -1096,7 +1096,7 @@ fn test_repay_loan_without_borrower() {
 }
 
 #[test]
-#[should_panic(expected = "borrower's loan was not found or exists")]
+#[should_panic(expected = "Error(Contract, #8)")]
 fn test_repay_loan_without_active_loan() {
     let setup = Setup::new();
     let borrower = Address::generate(&setup.env);
@@ -1158,7 +1158,7 @@ fn test_repay_loan_amount() {
 }
 
 #[test]
-#[should_panic(expected = "borrower is not registered")]
+#[should_panic(expected = "Error(Contract, #6)")]
 fn test_repay_loan_amount_without_borrower() {
     let setup = Setup::new();
     let borrower = Address::generate(&setup.env);
@@ -1171,7 +1171,7 @@ fn test_repay_loan_amount_without_borrower() {
 }
 
 #[test]
-#[should_panic(expected = "borrower's loan was not found or exists")]
+#[should_panic(expected = "Error(Contract, #8)")]
 fn test_repay_loan_amount_without_active_loan() {
     let setup = Setup::new();
     setup.env.mock_all_auths();
@@ -1258,7 +1258,7 @@ fn test_add_borrower_with_fake_admin() {
 }
 
 #[test]
-#[should_panic(expected = "borrower is already registered")]
+#[should_panic(expected = "Error(Contract, #5)")]
 fn test_add_registered_borrower() {
     let setup = Setup::new();
 
@@ -1376,7 +1376,7 @@ fn test_remove_borrower_with_fake_admin() {
 }
 
 #[test]
-#[should_panic(expected = "borrower is not registered")]
+#[should_panic(expected = "Error(Contract, #6)")]
 fn test_remove_without_borrower() {
     let setup = Setup::new();
     let borrower = Address::generate(&setup.env);
@@ -1461,7 +1461,7 @@ fn test_add_lender_with_fake_admin() {
 }
 
 #[test]
-#[should_panic(expected = "lender is already registered")]
+#[should_panic(expected = "Error(Contract, #9)")]
 fn test_add_registered_lender() {
     let setup = Setup::new();
     let lender = Address::generate(&setup.env);
@@ -1580,7 +1580,7 @@ fn test_remove_lender_with_fake_admin() {
 }
 
 #[test]
-#[should_panic(expected = "lender is not registered")]
+#[should_panic(expected = "Error(Contract, #10)")]
 fn test_remove_without_lender() {
     let setup = Setup::new();
     let lender = Address::generate(&setup.env);

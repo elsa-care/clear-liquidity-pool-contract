@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use crate::errors::LPError;
 use crate::storage::{
     has_borrower, has_lender, read_admin, read_contract_balance, read_contributions, read_lender,
     read_loans, read_token,
@@ -111,9 +112,11 @@ impl LiquidityPoolContract {
         contract_events
     }
 
-    pub fn read_admin(&self) -> Address {
-        self.env
-            .as_contract(&self.contract_id, || read_admin(&self.env))
+    pub fn read_admin(&self) -> Result<Address, LPError> {
+        self.env.as_contract(&self.contract_id, || {
+            let admin = read_admin(&self.env)?;
+            Ok(admin)
+        })
     }
 
     pub fn has_borrower(&self, borrower: &Address) -> bool {
