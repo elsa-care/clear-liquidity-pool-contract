@@ -1,6 +1,7 @@
 #![no_std]
 
 mod errors;
+mod event;
 mod interface;
 mod percentage;
 mod storage;
@@ -99,6 +100,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_token(&env, &token);
         write_contract_balance(&env, &0i128);
 
+        event::initialize(&env, admin, token);
         Ok(())
     }
 
@@ -136,10 +138,11 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         let mut contributions = read_contributions(&env);
 
         if !contributions.contains(lender.clone()) {
-            contributions.push_back(lender);
+            contributions.push_back(lender.clone());
             write_lender_contribution(&env, contributions);
         }
 
+        event::deposit(&env, lender, amount);
         Ok(())
     }
 
@@ -154,6 +157,14 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         let mut lender_balance = read_lender(&env, &lender);
 
         check_nonnegative_amount(amount)?;
+      
+        if amount > lender_balance {
+            return Err(LPError::InsufficientBalance);
+        }
+
+        if amount > total_balance {
+            return Err(LPError::BalanceNotAvailableForAmountRequested);
+        }
 
         if amount > lender_balance {
             return Err(LPError::InsufficientBalance);
@@ -175,6 +186,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             remove_lender_contribution(&env, &lender)?;
         }
 
+        event::withdraw(&env, lender, amount);
         Ok(())
     }
 
@@ -216,6 +228,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_loans(&env, &borrower, &loans);
         write_borrower(&env, &borrower, true);
 
+        event::loan(&env, borrower, new_loan.id, amount);
         Ok(new_loan.id)
     }
 
@@ -258,6 +271,8 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         write_loans(&env, &borrower, &loans);
         write_contract_balance(&env, &total_balance);
+      
+        event::repay_loan(&env, borrower, loan_id, amount);
         Ok(())
     }
 
@@ -278,40 +293,46 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
     }
 
     fn add_borrower(env: Env, borrower: Address) -> Result<(), LPError> {
-        check_admin(&env)?;
+        let admin = check_admin(&env)?;
 
         if has_borrower(&env, &borrower) {
             return Err(LPError::BorrowerAlreadyRegistered);
         }
 
         write_borrower(&env, &borrower, false);
+
+        event::add_borrower(&env, admin, borrower);
         Ok(())
     }
 
     fn remove_borrower(env: Env, borrower: Address) -> Result<(), LPError> {
-        check_admin(&env)?;
+        let admin = check_admin(&env)?;
 
         if !has_borrower(&env, &borrower) {
             return Err(LPError::BorrowerNotRegistered);
         }
 
         remove_borrower(&env, &borrower);
+      
+        event::remove_borrower(&env, admin, borrower);
         Ok(())
     }
 
     fn add_lender(env: Env, lender: Address) -> Result<(), LPError> {
-        check_admin(&env)?;
+        let admin = check_admin(&env)?;
 
         if has_lender(&env, &lender) {
             return Err(LPError::LenderAlreadyRegistered);
         }
 
         write_lender(&env, &lender, &0i128);
+
+        event::add_lender(&env, admin, lender);
         Ok(())
     }
 
     fn remove_lender(env: Env, lender: Address) -> Result<(), LPError> {
-        check_admin(&env)?;
+        let admin = check_admin(&env)?;
 
         if !has_lender(&env, &lender) {
             return Err(LPError::LenderNotRegistered);
@@ -319,6 +340,8 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         remove_lender(&env, &lender);
         remove_lender_contribution(&env, &lender)?;
+
+        event::remove_lender(&env, admin, lender);
         Ok(())
     }
 }

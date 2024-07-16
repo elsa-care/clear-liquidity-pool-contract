@@ -5,10 +5,10 @@ use crate::{
     types::{DataKey, Loan},
 };
 
-pub fn check_admin(env: &Env) -> Result<(), LPError> {
+pub fn check_admin(env: &Env) -> Result<Address, LPError> {
     let admin = read_admin(env)?;
     admin.require_auth();
-    Ok(())
+    Ok(admin)
 }
 
 pub fn has_admin(env: &Env) -> bool {
