@@ -136,9 +136,11 @@ impl LiquidityPoolContract {
             .as_contract(&self.contract_id, || has_lender(&self.env, lender))
     }
 
-    pub fn read_token(&self) -> Address {
-        self.env
-            .as_contract(&self.contract_id, || read_token(&self.env))
+    pub fn read_token(&self) -> Result<Address, LPError> {
+        self.env.as_contract(&self.contract_id, || {
+            let token = read_token(&self.env)?;
+            Ok(token)
+        })
     }
 
     pub fn read_contract_balance(&self) -> i128 {

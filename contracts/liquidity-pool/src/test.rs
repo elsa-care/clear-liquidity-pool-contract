@@ -14,7 +14,10 @@ fn test_initialize() {
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
     assert_eq!(setup.liquid_contract.read_admin(), Ok(setup.admin.clone()));
-    assert_eq!(setup.liquid_contract.read_token(), setup.token.address);
+    assert_eq!(
+        setup.liquid_contract.read_token(),
+        Ok(setup.token.address.clone())
+    );
     assert_eq!(
         contract_events,
         vec![
