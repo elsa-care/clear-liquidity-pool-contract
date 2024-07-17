@@ -2,7 +2,7 @@ use soroban_sdk::{Address, Env, Vec};
 
 use crate::{
     errors::LPError,
-    types::{DataKey, Loan},
+    types::{DataKey, Lender, Loan},
 };
 
 pub fn check_admin(env: &Env) -> Result<Address, LPError> {
@@ -55,11 +55,11 @@ pub fn read_loans(env: &Env, borrower: &Address) -> Vec<Loan> {
         .unwrap_or(Vec::new(env))
 }
 
-pub fn read_lender(env: &Env, lender: &Address) -> i128 {
+pub fn read_lender(env: &Env, lender: &Address) -> Result<Lender, LPError> {
     env.storage()
         .persistent()
         .get(&DataKey::Lender(lender.clone()))
-        .unwrap_or(0)
+        .ok_or(LPError::LenderNotFound)
 }
 
 pub fn read_token(env: &Env) -> Result<Address, LPError> {
@@ -117,10 +117,10 @@ pub fn write_loans(env: &Env, borrower: &Address, loans: &Vec<Loan>) {
         .set(&DataKey::Loan(borrower.clone()), loans);
 }
 
-pub fn write_lender(env: &Env, lender: &Address, amount: &i128) {
+pub fn write_lender(env: &Env, lender: &Address, data: &Lender) {
     env.storage()
         .persistent()
-        .set(&DataKey::Lender(lender.clone()), amount);
+        .set(&DataKey::Lender(lender.clone()), data);
 }
 
 pub fn write_lender_contribution(env: &Env, contributions: Vec<Address>) {
