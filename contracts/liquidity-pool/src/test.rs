@@ -74,7 +74,7 @@ fn test_balance_with_lender() {
 
     let balance = setup.liquid_contract.client().balance(&lender);
 
-    assert_eq!(setup.liquid_contract.read_lender(&lender), balance);
+    assert_eq!(setup.liquid_contract.read_lender(&lender), Ok(balance));
 }
 
 #[test]
@@ -126,10 +126,10 @@ fn test_deposit() {
     let contract_events = setup.liquid_contract.get_contract_events();
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 11i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 4i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), Ok(4i128));
     assert!(setup.liquid_contract.is_lender_in_contributions(&lender1));
 
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 7i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), Ok(7i128));
     assert!(setup.liquid_contract.is_lender_in_contributions(&lender2));
     assert_eq!(
         contract_events,
@@ -275,8 +275,8 @@ fn test_withdraw() {
     let contract_events = setup.liquid_contract.get_contract_events();
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 8i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 5i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 3i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), Ok(5i128));
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), Ok(3i128));
     assert!(setup.liquid_contract.is_lender_in_contributions(&lender1));
     assert!(setup.liquid_contract.is_lender_in_contributions(&lender2));
     assert_eq!(
@@ -386,7 +386,7 @@ fn test_withdraw_by_remove_contribution() {
         .withdraw(&lender, &10i128);
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender), 0i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender), Ok(0i128));
     assert!(!setup.liquid_contract.is_lender_in_contributions(&lender));
 }
 
@@ -513,8 +513,8 @@ fn test_loan() {
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 10i128);
     assert!(setup.liquid_contract.has_loan(&borrower, loan_id));
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 5i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 5i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), Ok(5i128));
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), Ok(5i128));
     assert_eq!(
         contract_events,
         vec![
@@ -791,8 +791,8 @@ fn test_repay_loan_with_repayment_total_amount() {
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
     assert!(setup.liquid_contract.has_loan(&borrower, loan_id));
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 0i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 0i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), Ok(0i128));
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), Ok(0i128));
 
     set_timestamp_for_20_days(&setup.env);
 
@@ -810,8 +810,8 @@ fn test_repay_loan_with_repayment_total_amount() {
     let contract_events = setup.liquid_contract.get_contract_events();
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 1002i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 501i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 501i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), Ok(501i128));
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), Ok(501i128));
     assert!(!setup.liquid_contract.has_loan(&borrower, loan_id));
     assert_eq!(
         contract_events,
@@ -953,8 +953,8 @@ fn test_repay_loan_without_repayment_total_amount() {
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
     assert!(setup.liquid_contract.has_loan(&borrower, loan_id));
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 0i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 0i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), Ok(0i128));
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), Ok(0i128));
 
     set_timestamp_for_20_days(&setup.env);
 
@@ -972,8 +972,8 @@ fn test_repay_loan_without_repayment_total_amount() {
     let contract_events = setup.liquid_contract.get_contract_events();
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 1000i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 500i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 500i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), Ok(500i128));
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), Ok(500i128));
     assert!(setup.liquid_contract.has_loan(&borrower, loan_id));
     assert_eq!(
         setup.liquid_contract.read_loan_amount(&borrower, loan_id),
