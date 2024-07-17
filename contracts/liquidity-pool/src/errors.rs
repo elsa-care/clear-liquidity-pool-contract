@@ -15,4 +15,7 @@ pub enum LPError {
     LenderAlreadyRegistered = 9,
     LenderNotRegistered = 10,
     AdminNotFound = 11,
+    TokenNotFound = 12,
+    LenderNotFoundInContributions = 13,
+    LenderBalanceNotFound = 14,
 }

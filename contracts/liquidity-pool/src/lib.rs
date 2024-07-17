@@ -22,13 +22,14 @@ use crate::types::Loan;
 use soroban_sdk::{
     contract, contractimpl, contractmeta,
     token::{self},
-    Address, Env, Vec,
+    Address, Env, Map, Vec,
 };
 
-fn token_transfer(env: &Env, from: &Address, to: &Address, amount: &i128) {
-    let token_id = read_token(env);
+fn token_transfer(env: &Env, from: &Address, to: &Address, amount: &i128) -> Result<(), LPError> {
+    let token_id = read_token(env)?;
     let token = token::Client::new(env, &token_id);
     token.transfer(from, to, amount);
+    Ok(())
 }
 
 fn calculate_fees(env: &Env, loan: &Loan) -> i128 {
@@ -56,6 +57,27 @@ fn check_nonnegative_amount(amount: i128) -> Result<(), LPError> {
         return Err(LPError::AmountMustBePositive);
     }
 
+    Ok(())
+}
+
+fn update_lender_balances(
+    env: &Env,
+    lenders: Vec<Address>,
+    new_lender_amounts: Map<Address, i128>,
+) -> Result<(), LPError> {
+    for lender in lenders.iter() {
+        match new_lender_amounts.try_get(lender.clone()) {
+            Ok(Some(new_lender_balance)) => {
+                write_lender(env, &lender, &new_lender_balance);
+            }
+            Ok(None) => {
+                return Err(LPError::LenderNotFoundInContributions);
+            }
+            Err(_) => {
+                return Err(LPError::LenderNotFoundInContributions);
+            }
+        }
+    }
     Ok(())
 }
 
@@ -102,7 +124,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::LenderNotRegistered);
         }
 
-        token_transfer(&env, &lender, &env.current_contract_address(), &amount);
+        token_transfer(&env, &lender, &env.current_contract_address(), &amount)?;
 
         let mut total_balance = read_contract_balance(&env);
         let mut lender_balance = read_lender(&env, &lender);
@@ -135,6 +157,14 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         let mut lender_balance = read_lender(&env, &lender);
 
         check_nonnegative_amount(amount)?;
+      
+        if amount > lender_balance {
+            return Err(LPError::InsufficientBalance);
+        }
+
+        if amount > total_balance {
+            return Err(LPError::BalanceNotAvailableForAmountRequested);
+        }
 
         if amount > lender_balance {
             return Err(LPError::InsufficientBalance);
@@ -144,7 +174,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BalanceNotAvailableForAmountRequested);
         }
 
-        token_transfer(&env, &env.current_contract_address(), &lender, &amount);
+        token_transfer(&env, &env.current_contract_address(), &lender, &amount)?;
 
         total_balance -= amount;
         lender_balance -= amount;
@@ -153,7 +183,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_lender(&env, &lender, &lender_balance);
 
         if lender_balance <= 0 {
-            remove_lender_contribution(&env, &lender);
+            remove_lender_contribution(&env, &lender)?;
         }
 
         event::withdraw(&env, lender, amount);
@@ -174,7 +204,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BalanceNotAvailableForAmountRequested);
         }
 
-        token_transfer(&env, &env.current_contract_address(), &borrower, &amount);
+        token_transfer(&env, &env.current_contract_address(), &borrower, &amount)?;
 
         let lenders = read_contributions(&env);
 
@@ -192,10 +222,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         loans.push_back(new_loan.clone());
 
-        for lender in lenders.iter() {
-            let new_lender_balance = new_lender_amounts.get(lender.clone()).unwrap();
-            write_lender(&env, &lender, &new_lender_balance);
-        }
+        update_lender_balances(&env, lenders, new_lender_amounts)?;
 
         write_contract_balance(&env, &(total_balance - amount));
         write_loans(&env, &borrower, &loans);
@@ -222,7 +249,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             .map(|(index, loan)| (index, loan.clone()))
             .ok_or(LPError::LoanNotFoundOrExists)?;
 
-        token_transfer(&env, &borrower, &env.current_contract_address(), &amount);
+        token_transfer(&env, &borrower, &env.current_contract_address(), &amount)?;
 
         for (lender, percentage) in loan.contributions.iter() {
             let lender_balance = read_lender(&env, &lender);
@@ -244,7 +271,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         write_loans(&env, &borrower, &loans);
         write_contract_balance(&env, &total_balance);
-
+      
         event::repay_loan(&env, borrower, loan_id, amount);
         Ok(())
     }
@@ -286,7 +313,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         }
 
         remove_borrower(&env, &borrower);
-
+      
         event::remove_borrower(&env, admin, borrower);
         Ok(())
     }
@@ -312,7 +339,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         }
 
         remove_lender(&env, &lender);
-        remove_lender_contribution(&env, &lender);
+        remove_lender_contribution(&env, &lender)?;
 
         event::remove_lender(&env, admin, lender);
         Ok(())
