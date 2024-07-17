@@ -122,50 +122,50 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         Err(LPError::AddressNotRegistered)
     }
 
-    fn deposit(env: Env, lender: Address, amount: i128) -> Result<(), LPError> {
-        lender.require_auth();
+    fn deposit(env: Env, address: Address, amount: i128) -> Result<(), LPError> {
+        address.require_auth();
 
         check_nonnegative_amount(amount)?;
 
-        if !has_lender(&env, &lender) {
+        if !has_lender(&env, &address) {
             return Err(LPError::LenderNotRegistered);
         }
 
-        token_transfer(&env, &lender, &env.current_contract_address(), &amount)?;
+        token_transfer(&env, &address, &env.current_contract_address(), &amount)?;
 
         let mut total_balance = read_contract_balance(&env);
-        let mut lender_data = read_lender(&env, &lender)?;
+        let mut lender = read_lender(&env, &address)?;
 
         total_balance += amount;
-        lender_data.balance += amount;
+        lender.balance += amount;
 
         write_contract_balance(&env, &total_balance);
-        write_lender(&env, &lender, &lender_data);
+        write_lender(&env, &address, &lender);
 
         let mut contributions = read_contributions(&env);
 
-        if !contributions.contains(lender.clone()) {
-            contributions.push_back(lender.clone());
+        if !contributions.contains(address.clone()) {
+            contributions.push_back(address.clone());
             write_lender_contribution(&env, contributions);
         }
 
-        event::deposit(&env, lender, amount);
+        event::deposit(&env, address, amount);
         Ok(())
     }
 
-    fn withdraw(env: Env, lender: Address, amount: i128) -> Result<(), LPError> {
-        lender.require_auth();
+    fn withdraw(env: Env, address: Address, amount: i128) -> Result<(), LPError> {
+        address.require_auth();
 
-        if !has_lender(&env, &lender) {
+        if !has_lender(&env, &address) {
             return Err(LPError::LenderNotRegistered);
         }
 
         check_nonnegative_amount(amount)?;
 
         let mut total_balance = read_contract_balance(&env);
-        let mut lender_data = read_lender(&env, &lender)?;
+        let mut lender = read_lender(&env, &address)?;
 
-        if amount > lender_data.balance {
+        if amount > lender.balance {
             return Err(LPError::InsufficientBalance);
         }
 
@@ -173,19 +173,19 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BalanceNotAvailableForAmountRequested);
         }
 
-        token_transfer(&env, &env.current_contract_address(), &lender, &amount)?;
+        token_transfer(&env, &env.current_contract_address(), &address, &amount)?;
 
         total_balance -= amount;
-        lender_data.balance -= amount;
+        lender.balance -= amount;
 
         write_contract_balance(&env, &total_balance);
-        write_lender(&env, &lender, &lender_data);
+        write_lender(&env, &address, &lender);
 
-        if lender_data.balance <= 0 {
-            remove_lender_contribution(&env, &lender)?;
+        if lender.balance <= 0 {
+            remove_lender_contribution(&env, &address)?;
         }
 
-        event::withdraw(&env, lender, amount);
+        event::withdraw(&env, address, amount);
         Ok(())
     }
 
@@ -250,10 +250,10 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         token_transfer(&env, &borrower, &env.current_contract_address(), &amount)?;
 
-        for (lender, percentage) in loan.contributions.iter() {
-            let mut lender_data = read_lender(&env, &lender)?;
-            lender_data.balance += calculate_repayment_amount(amount, percentage);
-            write_lender(&env, &lender, &lender_data);
+        for (address, percentage) in loan.contributions.iter() {
+            let mut lender = read_lender(&env, &address)?;
+            lender.balance += calculate_repayment_amount(amount, percentage);
+            write_lender(&env, &address, &lender);
         }
 
         let repay_loan_amount = loan.amount + calculate_fees(&env, &loan);
