@@ -248,7 +248,13 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             .map(|(index, loan)| (index, loan.clone()))
             .ok_or(LPError::LoanNotFoundOrExists)?;
 
-        token_transfer(&env, &borrower, &env.current_contract_address(), &amount)?;
+        let admin = read_admin(&env)?;
+        let total_fees = calculate_fees(&env, &loan);
+        let admin_fees = total_fees / 10;
+        let amount_for_lenders = amount - admin_fees;
+
+        token_transfer(&env, &borrower, &env.current_contract_address(), &amount);
+        token_transfer(&env, &env.current_contract_address(), &admin, &admin_fees);
 
         for (address, percentage) in loan.contributions.iter() {
             let mut lender = read_lender(&env, &address)?;
