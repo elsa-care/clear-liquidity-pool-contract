@@ -1,6 +1,11 @@
 use soroban_sdk::{Address, Env, Map, Vec};
 
+use crate::errors::LPError;
 use crate::storage::read_lender;
+
+type ContributionsMap = Map<Address, i64>;
+type LenderAmountMap = Map<Address, i128>;
+type ContributionResult = Result<(ContributionsMap, LenderAmountMap), LPError>;
 
 pub(crate) const ONE_XLM_IN_STROOPS: i64 = 10_000_000;
 
@@ -25,17 +30,17 @@ pub fn process_lender_contribution(
     contributions: Vec<Address>,
     loan_amount: &i128,
     total_balance: &i128,
-) -> (Map<Address, i64>, Map<Address, i128>) {
+) -> ContributionResult {
     let mut lender_contributions = Map::new(env);
     let mut new_lender_amounts = Map::new(env);
 
     for address in contributions.iter() {
-        let lender_balance = read_lender(env, &address);
-        let percentage = calculate_percentage(&lender_balance, total_balance);
+        let lender = read_lender(env, &address)?;
+        let percentage = calculate_percentage(&lender.balance, total_balance);
         let new_lender_amount =
-            calculate_new_lender_amount(loan_amount, &lender_balance, percentage);
+            calculate_new_lender_amount(loan_amount, &lender.balance, percentage);
         lender_contributions.set(address.clone(), percentage);
         new_lender_amounts.set(address.clone(), new_lender_amount);
     }
-    (lender_contributions, new_lender_amounts)
+    Ok((lender_contributions, new_lender_amounts))
 }

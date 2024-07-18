@@ -11,6 +11,13 @@ pub struct Loan {
 
 #[derive(Clone)]
 #[contracttype]
+pub struct Lender {
+    pub active: bool,
+    pub balance: i128,
+}
+
+#[derive(Clone)]
+#[contracttype]
 pub enum DataKey {
     TotalBalance,
     Token,
