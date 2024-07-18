@@ -19,4 +19,6 @@ pub enum LPError {
     LenderNotFoundInContributions = 13,
     LenderBalanceNotFound = 14,
     LenderNotFound = 15,
+    BorrowerNotFound = 17,
+    BorrowerDisabled = 18,
 }

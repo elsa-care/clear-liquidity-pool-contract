@@ -30,6 +30,12 @@ pub(crate) fn add_borrower(env: &Env, admin: Address, borrower: Address) {
     env.events().publish(topics, ());
 }
 
+pub(crate) fn set_borrower_status(env: &Env, admin: Address, borrower: Address, active: bool) {
+    let topics: (Symbol, Address, Address) =
+        (Symbol::new(env, "set_borrower_status"), admin, borrower);
+    env.events().publish(topics, active);
+}
+
 pub(crate) fn remove_borrower(env: &Env, admin: Address, borrower: Address) {
     let topics = (Symbol::new(env, "remove_borrower"), admin, borrower);
     env.events().publish(topics, ());

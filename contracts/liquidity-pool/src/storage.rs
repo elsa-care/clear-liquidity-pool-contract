@@ -34,6 +34,13 @@ pub fn has_lender(env: &Env, lender: &Address) -> bool {
         .has(&DataKey::Lender(lender.clone()))
 }
 
+pub fn read_borrower(env: &Env, borrower: &Address) -> Result<bool, LPError> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Borrower(borrower.clone()))
+        .ok_or(LPError::BorrowerNotFound)
+}
+
 pub fn read_contract_balance(env: &Env) -> i128 {
     env.storage()
         .persistent()
