@@ -740,54 +740,31 @@ fn test_request_two_loans() {
 #[test]
 fn test_repay_loan_with_repayment_total_amount() {
     let setup = Setup::new();
+    setup.env.mock_all_auths();
+
     let borrower = Address::generate(&setup.env);
     let lender1 = Address::generate(&setup.env);
     let lender2 = Address::generate(&setup.env);
 
-    setup
-        .liquid_contract
-        .client()
-        .mock_all_auths()
-        .add_lender(&lender1);
+    setup.liquid_contract.client().add_lender(&lender1);
 
-    setup
-        .liquid_contract
-        .client()
-        .mock_all_auths()
-        .add_lender(&lender2);
+    setup.liquid_contract.client().add_lender(&lender2);
 
-    setup.token_admin.mock_all_auths().mint(&lender1, &500i128);
-    setup.token_admin.mock_all_auths().mint(&lender2, &500i128);
+    setup.token_admin.mint(&lender1, &5000i128);
+    setup.token_admin.mint(&lender2, &5000i128);
     setup
         .token_admin
-        .mock_all_auths()
-        .mint(&setup.liquid_contract_id, &1000i128);
+        .mint(&setup.liquid_contract_id, &10000i128);
 
-    setup
-        .liquid_contract
-        .client()
-        .mock_all_auths()
-        .deposit(&lender1, &500i128);
+    setup.liquid_contract.client().deposit(&lender1, &5000i128);
 
-    setup
-        .liquid_contract
-        .client()
-        .mock_all_auths()
-        .deposit(&lender2, &500i128);
+    setup.liquid_contract.client().deposit(&lender2, &5000i128);
 
-    assert_eq!(setup.liquid_contract.read_contract_balance(), 1000i128);
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 10000i128);
 
-    setup
-        .liquid_contract
-        .client()
-        .mock_all_auths()
-        .add_borrower(&borrower);
+    setup.liquid_contract.client().add_borrower(&borrower);
 
-    let loan_id = setup
-        .liquid_contract
-        .client()
-        .mock_all_auths()
-        .loan(&borrower, &1000i128);
+    let loan_id = setup.liquid_contract.client().loan(&borrower, &10000i128);
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 0i128);
     assert!(setup.liquid_contract.has_loan(&borrower, loan_id));
@@ -796,22 +773,18 @@ fn test_repay_loan_with_repayment_total_amount() {
 
     set_timestamp_for_20_days(&setup.env);
 
-    setup
-        .token_admin
-        .mock_all_auths()
-        .mint(&borrower, &1002i128);
+    setup.token_admin.mint(&borrower, &10020i128);
 
     setup
         .liquid_contract
         .client()
-        .mock_all_auths()
-        .repay_loan(&borrower, &loan_id, &1002i128);
+        .repay_loan(&borrower, &loan_id, &10020i128);
 
     let contract_events = setup.liquid_contract.get_contract_events();
 
-    assert_eq!(setup.liquid_contract.read_contract_balance(), 1002i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 501i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 501i128);
+    assert_eq!(setup.liquid_contract.read_contract_balance(), 10020i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), 5009i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), 5009i128);
     assert!(!setup.liquid_contract.has_loan(&borrower, loan_id));
     assert_eq!(
         contract_events,
@@ -854,7 +827,7 @@ fn test_repay_loan_with_repayment_total_amount() {
                     *Symbol::new(&setup.env, "deposit").as_val(),
                     lender1.into_val(&setup.env),
                 ],
-                500i128.into_val(&setup.env)
+                5000i128.into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -863,7 +836,7 @@ fn test_repay_loan_with_repayment_total_amount() {
                     *Symbol::new(&setup.env, "deposit").as_val(),
                     lender2.into_val(&setup.env),
                 ],
-                500i128.into_val(&setup.env)
+                5000i128.into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -883,7 +856,7 @@ fn test_repay_loan_with_repayment_total_amount() {
                     borrower.into_val(&setup.env),
                     loan_id.into_val(&setup.env),
                 ],
-                1000i128.into_val(&setup.env)
+                10000i128.into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -893,7 +866,7 @@ fn test_repay_loan_with_repayment_total_amount() {
                     borrower.into_val(&setup.env),
                     loan_id.into_val(&setup.env),
                 ],
-                1002i128.into_val(&setup.env)
+                10020i128.into_val(&setup.env)
             )
         ]
     );
