@@ -2,8 +2,8 @@
 
 use crate::errors::LPError;
 use crate::storage::{
-    has_borrower, has_lender, read_admin, read_contract_balance, read_contributions, read_lender,
-    read_loans, read_token,
+    has_borrower, has_lender, read_admin, read_borrower, read_contract_balance, read_contributions,
+    read_lender, read_loans, read_token,
 };
 use crate::LiquidityPoolContractClient;
 use soroban_sdk::{
@@ -140,6 +140,13 @@ impl LiquidityPoolContract {
         self.env.as_contract(&self.contract_id, || {
             let token = read_token(&self.env)?;
             Ok(token)
+        })
+    }
+
+    pub fn read_borrower(&self, borrower: &Address) -> Result<bool, LPError> {
+        self.env.as_contract(&self.contract_id, || {
+            let borrower = read_borrower(&self.env, borrower)?;
+            Ok(borrower)
         })
     }
 
