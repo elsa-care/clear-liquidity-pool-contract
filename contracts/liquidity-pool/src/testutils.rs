@@ -164,6 +164,13 @@ impl LiquidityPoolContract {
         })
     }
 
+    pub fn read_lender_status(&self, lender: &Address) -> Result<bool, LPError> {
+        self.env.as_contract(&self.contract_id, || {
+            let lender = read_lender(&self.env, lender)?;
+            Ok(lender.active)
+        })
+    }
+
     pub fn is_lender_in_contributions(&self, lender: &Address) -> bool {
         self.env.as_contract(&self.contract_id, || {
             let contributions = read_contributions(&self.env);
