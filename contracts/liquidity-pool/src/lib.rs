@@ -131,10 +131,14 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::LenderNotRegistered);
         }
 
+        let mut lender = read_lender(&env, &address)?;
+        if !lender.active {
+            return Err(LPError::LenderDisabled);
+        }
+
         token_transfer(&env, &address, &env.current_contract_address(), &amount)?;
 
         let mut total_balance = read_contract_balance(&env);
-        let mut lender = read_lender(&env, &address)?;
 
         total_balance += amount;
         lender.balance += amount;
@@ -253,12 +257,12 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         let admin_fees = total_fees / 10;
         let amount_for_lenders = amount - admin_fees;
 
-        token_transfer(&env, &borrower, &env.current_contract_address(), &amount);
-        token_transfer(&env, &env.current_contract_address(), &admin, &admin_fees);
+        token_transfer(&env, &borrower, &env.current_contract_address(), &amount)?;
+        token_transfer(&env, &env.current_contract_address(), &admin, &admin_fees)?;
 
         for (address, percentage) in loan.contributions.iter() {
             let mut lender = read_lender(&env, &address)?;
-            lender.balance += calculate_repayment_amount(amount, percentage);
+            lender.balance += calculate_repayment_amount(amount_for_lenders, percentage);
             write_lender(&env, &address, &lender);
         }
 
@@ -337,6 +341,36 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_lender(&env, &lender, &data);
 
         event::add_lender(&env, admin, lender);
+        Ok(())
+    }
+
+    fn set_lender_status(env: Env, address: Address, active: bool) -> Result<(), LPError> {
+        let admin = check_admin(&env)?;
+
+        if !has_lender(&env, &address) {
+            return Err(LPError::LenderNotRegistered);
+        }
+
+        let mut lender = read_lender(&env, &address)?;
+        lender.active = active;
+
+        let mut contributions = read_contributions(&env);
+
+        if lender.active {
+            if !contributions.contains(&address) {
+                contributions.push_back(address.clone());
+            }
+        } else if let Some(index) = contributions
+            .iter()
+            .position(|addr| addr == address.clone())
+        {
+            contributions.remove(index as u32);
+        }
+
+        write_lender(&env, &address, &lender);
+        write_lender_contribution(&env, contributions);
+
+        event::set_lender_status(&env, admin, address, active);
         Ok(())
     }
 

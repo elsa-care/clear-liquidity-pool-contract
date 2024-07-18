@@ -36,11 +36,14 @@ pub fn process_lender_contribution(
 
     for address in contributions.iter() {
         let lender = read_lender(env, &address)?;
-        let percentage = calculate_percentage(&lender.balance, total_balance);
-        let new_lender_amount =
-            calculate_new_lender_amount(loan_amount, &lender.balance, percentage);
-        lender_contributions.set(address.clone(), percentage);
-        new_lender_amounts.set(address.clone(), new_lender_amount);
+
+        if lender.active {
+            let percentage = calculate_percentage(&lender.balance, total_balance);
+            let new_lender_amount =
+                calculate_new_lender_amount(loan_amount, &lender.balance, percentage);
+            lender_contributions.set(address.clone(), percentage);
+            new_lender_amounts.set(address.clone(), new_lender_amount);
+        }
     }
     Ok((lender_contributions, new_lender_amounts))
 }
