@@ -1652,3 +1652,33 @@ fn test_set_lender_status_not_registered() {
         .mock_all_auths()
         .set_lender_status(&lender, &false);
 }
+
+#[test]
+#[should_panic(expected = "Unauthorized function call for address")]
+fn test_set_lender_status_with_fake_admin() {
+    let setup = Setup::new();
+    let lender = Address::generate(&setup.env);
+    let fake_admin = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_all_auths()
+        .add_lender(&lender);
+
+    assert!(setup.liquid_contract.has_lender(&lender));
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_auths(&[MockAuth {
+            address: &fake_admin,
+            invoke: &MockAuthInvoke {
+                contract: &setup.liquid_contract_id,
+                fn_name: "set_lender_status",
+                args: (lender.clone(), false).into_val(&setup.env),
+                sub_invokes: &[],
+            },
+        }])
+        .set_lender_status(&lender, &false);
+}
