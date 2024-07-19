@@ -12,10 +12,10 @@ use crate::errors::LPError;
 use crate::interface::LiquidityPoolTrait;
 use crate::percentage::{calculate_repayment_amount, process_lender_contribution};
 use crate::storage::{
-    check_admin, has_admin, has_borrower, has_lender, read_admin, read_contract_balance,
-    read_contributions, read_lender, read_loans, read_token, remove_borrower, remove_lender,
-    remove_lender_contribution, write_admin, write_borrower, write_contract_balance, write_lender,
-    write_lender_contribution, write_loans, write_token,
+    check_admin, has_admin, has_borrower, has_lender, read_admin, read_borrower,
+    read_contract_balance, read_contributions, read_lender, read_loans, read_token,
+    remove_borrower, remove_lender, remove_lender_contribution, write_admin, write_borrower,
+    write_contract_balance, write_lender, write_lender_contribution, write_loans, write_token,
 };
 use crate::types::{Lender, Loan};
 
@@ -193,12 +193,16 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         Ok(())
     }
 
-    fn loan(env: Env, borrower: Address, amount: i128) -> Result<u64, LPError> {
-        borrower.require_auth();
+    fn loan(env: Env, address: Address, amount: i128) -> Result<u64, LPError> {
+        address.require_auth();
 
         check_nonnegative_amount(amount)?;
-        if !has_borrower(&env, &borrower) {
+        if !has_borrower(&env, &address) {
             return Err(LPError::BorrowerNotRegistered);
+        }
+
+        if !read_borrower(&env, &address)? {
+            return Err(LPError::BorrowerDisabled);
         }
 
         let total_balance = read_contract_balance(&env);
@@ -207,14 +211,14 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BalanceNotAvailableForAmountRequested);
         }
 
-        token_transfer(&env, &env.current_contract_address(), &borrower, &amount)?;
+        token_transfer(&env, &env.current_contract_address(), &address, &amount)?;
 
         let lenders = read_contributions(&env);
 
         let (lender_contributions, new_lender_amounts) =
             process_lender_contribution(&env, lenders.clone(), &amount, &total_balance)?;
 
-        let mut loans = read_loans(&env, &borrower);
+        let mut loans = read_loans(&env, &address);
 
         let new_loan = Loan {
             id: generate_id(&env, &loans),
@@ -228,10 +232,10 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         update_lender_balances(&env, lenders, new_lender_amounts)?;
 
         write_contract_balance(&env, &(total_balance - amount));
-        write_loans(&env, &borrower, &loans);
-        write_borrower(&env, &borrower, true);
+        write_loans(&env, &address, &loans);
+        write_borrower(&env, &address, true);
 
-        event::loan(&env, borrower, new_loan.id, amount);
+        event::loan(&env, address, new_loan.id, amount);
         Ok(new_loan.id)
     }
 
@@ -307,9 +311,22 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BorrowerAlreadyRegistered);
         }
 
-        write_borrower(&env, &borrower, false);
+        write_borrower(&env, &borrower, true);
 
         event::add_borrower(&env, admin, borrower);
+        Ok(())
+    }
+
+    fn set_borrower_status(env: Env, address: Address, active: bool) -> Result<(), LPError> {
+        let admin = check_admin(&env)?;
+
+        if !has_borrower(&env, &address) {
+            return Err(LPError::BorrowerNotRegistered);
+        }
+
+        write_borrower(&env, &address, active);
+
+        event::set_borrower_status(&env, admin, address, active);
         Ok(())
     }
 

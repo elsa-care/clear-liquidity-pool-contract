@@ -641,6 +641,23 @@ fn test_loan_without_borrower() {
 }
 
 #[test]
+#[should_panic(expected = "Error(Contract, #18)")]
+fn test_loan_with_disable_borrower() {
+    let setup = Setup::new();
+    setup.env.mock_all_auths();
+    let borrower = Address::generate(&setup.env);
+
+    setup.liquid_contract.client().add_borrower(&borrower);
+
+    setup
+        .liquid_contract
+        .client()
+        .set_borrower_status(&borrower, &false);
+
+    setup.liquid_contract.client().loan(&borrower, &10i128);
+}
+
+#[test]
 fn test_request_two_loans() {
     let setup = Setup::new();
     let borrower = Address::generate(&setup.env);
@@ -1268,6 +1285,105 @@ fn test_add_registered_borrower() {
         .client()
         .mock_all_auths()
         .add_borrower(&borrower);
+}
+
+#[test]
+fn test_set_borrower_status() {
+    let setup = Setup::new();
+    setup.env.mock_all_auths();
+    let borrower = Address::generate(&setup.env);
+
+    setup.liquid_contract.client().add_borrower(&borrower);
+
+    assert!(setup.liquid_contract.has_borrower(&borrower));
+
+    setup
+        .liquid_contract
+        .client()
+        .set_borrower_status(&borrower, &false);
+
+    let contract_events = setup.liquid_contract.get_contract_events();
+
+    assert_eq!(setup.liquid_contract.read_borrower(&borrower), Ok(false));
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_borrower").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    borrower.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "set_borrower_status").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    borrower.into_val(&setup.env),
+                ],
+                (false).into_val(&setup.env)
+            )
+        ]
+    );
+}
+
+#[test]
+#[should_panic(expected = "Unauthorized function call for address")]
+fn test_set_borrower_status_with_fake_admin() {
+    let setup = Setup::new();
+    let borrower = Address::generate(&setup.env);
+    let fake_admin = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_all_auths()
+        .add_borrower(&borrower);
+
+    assert!(setup.liquid_contract.has_borrower(&borrower));
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_auths(&[MockAuth {
+            address: &fake_admin,
+            invoke: &MockAuthInvoke {
+                contract: &setup.liquid_contract_id,
+                fn_name: "set_borrower_status",
+                args: (borrower.clone(), false).into_val(&setup.env),
+                sub_invokes: &[],
+            },
+        }])
+        .set_borrower_status(&borrower, &false);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #6)")]
+fn test_set_borrower_status_without_borrower() {
+    let setup = Setup::new();
+    let borrower = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_all_auths()
+        .set_borrower_status(&borrower, &false);
 }
 
 #[test]
