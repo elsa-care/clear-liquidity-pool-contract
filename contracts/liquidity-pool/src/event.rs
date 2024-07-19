@@ -46,6 +46,11 @@ pub(crate) fn add_lender(env: &Env, admin: Address, lender: Address) {
     env.events().publish(topics, ());
 }
 
+pub(crate) fn set_lender_status(env: &Env, admin: Address, lender: Address, active: bool) {
+    let topics = (Symbol::new(env, "set_lender_status"), admin, lender);
+    env.events().publish(topics, active);
+}
+
 pub(crate) fn remove_lender(env: &Env, admin: Address, lender: Address) {
     let topics = (Symbol::new(env, "remove_lender"), admin, lender);
     env.events().publish(topics, ());

@@ -18,6 +18,8 @@ pub trait LiquidityPoolTrait {
 
     fn add_lender(env: Env, lender: Address) -> Result<(), LPError>;
 
+    fn set_lender_status(env: Env, lender: Address, active: bool) -> Result<(), LPError>;
+
     fn remove_lender(env: Env, lender: Address) -> Result<(), LPError>;
 
     fn add_borrower(env: Env, borrower: Address) -> Result<(), LPError>;

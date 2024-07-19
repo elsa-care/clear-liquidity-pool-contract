@@ -220,6 +220,23 @@ fn test_deposit_with_negative_amount() {
 }
 
 #[test]
+#[should_panic(expected = "Error(Contract, #16)")]
+fn test_deposit_with_disabled_lender() {
+    let setup = Setup::new();
+    setup.env.mock_all_auths();
+    let lender = Address::generate(&setup.env);
+
+    setup.liquid_contract.client().add_lender(&lender);
+
+    setup
+        .liquid_contract
+        .client()
+        .set_lender_status(&lender, &false);
+
+    setup.liquid_contract.client().deposit(&lender, &10i128);
+}
+
+#[test]
 fn test_withdraw() {
     let setup = Setup::new();
     let lender1 = Address::generate(&setup.env);
@@ -1682,4 +1699,102 @@ fn test_remove_without_lender() {
         .client()
         .mock_all_auths()
         .remove_lender(&lender);
+}
+
+#[test]
+fn test_set_lender_status() {
+    let setup = Setup::new();
+    setup.env.mock_all_auths();
+    let lender = Address::generate(&setup.env);
+
+    setup.liquid_contract.client().add_lender(&lender);
+    assert!(setup.liquid_contract.has_lender(&lender));
+
+    setup
+        .liquid_contract
+        .client()
+        .set_lender_status(&lender, &false);
+
+    assert_eq!(setup.liquid_contract.read_lender_status(&lender), Ok(false));
+    let contract_events = setup.liquid_contract.get_contract_events();
+
+    assert_eq!(
+        contract_events,
+        vec![
+            &setup.env,
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "initialize").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    setup.token.address.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "add_lender").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender.into_val(&setup.env),
+                ],
+                ().into_val(&setup.env)
+            ),
+            (
+                setup.liquid_contract_id.clone(),
+                vec![
+                    &setup.env,
+                    *Symbol::new(&setup.env, "set_lender_status").as_val(),
+                    setup.admin.into_val(&setup.env),
+                    lender.into_val(&setup.env),
+                ],
+                (false).into_val(&setup.env)
+            )
+        ]
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #10)")]
+fn test_set_lender_status_not_registered() {
+    let setup = Setup::new();
+    let lender = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_all_auths()
+        .set_lender_status(&lender, &false);
+}
+
+#[test]
+#[should_panic(expected = "Unauthorized function call for address")]
+fn test_set_lender_status_with_fake_admin() {
+    let setup = Setup::new();
+    let lender = Address::generate(&setup.env);
+    let fake_admin = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_all_auths()
+        .add_lender(&lender);
+
+    assert!(setup.liquid_contract.has_lender(&lender));
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_auths(&[MockAuth {
+            address: &fake_admin,
+            invoke: &MockAuthInvoke {
+                contract: &setup.liquid_contract_id,
+                fn_name: "set_lender_status",
+                args: (lender.clone(), false).into_val(&setup.env),
+                sub_invokes: &[],
+            },
+        }])
+        .set_lender_status(&lender, &false);
 }
