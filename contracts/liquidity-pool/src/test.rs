@@ -783,8 +783,8 @@ fn test_repay_loan_with_repayment_total_amount() {
     let contract_events = setup.liquid_contract.get_contract_events();
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 10020i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender1), 5009i128);
-    assert_eq!(setup.liquid_contract.read_lender(&lender2), 5009i128);
+    assert_eq!(setup.liquid_contract.read_lender(&lender1), Ok(5009i128));
+    assert_eq!(setup.liquid_contract.read_lender(&lender2), Ok(5009i128));
     assert!(!setup.liquid_contract.has_loan(&borrower, loan_id));
     assert_eq!(
         contract_events,
