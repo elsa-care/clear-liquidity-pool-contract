@@ -26,5 +26,12 @@ pub trait LiquidityPoolTrait {
 
     fn set_borrower_status(env: Env, borrower: Address, active: bool) -> Result<(), LPError>;
 
+    fn set_borrower_limits(
+        env: Env,
+        borrower: Address,
+        min_amount: i128,
+        max_amount: i128,
+    ) -> Result<(), LPError>;
+
     fn remove_borrower(env: Env, lender: Address) -> Result<(), LPError>;
 }
