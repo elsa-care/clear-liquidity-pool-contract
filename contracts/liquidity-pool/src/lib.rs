@@ -17,7 +17,7 @@ use crate::storage::{
     remove_borrower, remove_lender, remove_lender_contribution, write_admin, write_borrower,
     write_contract_balance, write_lender, write_lender_contribution, write_loans, write_token,
 };
-use crate::types::{Lender, Loan};
+use crate::types::{Borrower, Lender, Loan};
 
 use soroban_sdk::{
     contract, contractimpl, contractmeta,
@@ -201,7 +201,9 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BorrowerNotRegistered);
         }
 
-        if !read_borrower(&env, &address)? {
+        let borrower = read_borrower(&env, &address)?;
+
+        if !borrower.active {
             return Err(LPError::BorrowerDisabled);
         }
 
@@ -233,7 +235,6 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         write_contract_balance(&env, &(total_balance - amount));
         write_loans(&env, &address, &loans);
-        write_borrower(&env, &address, true);
 
         event::loan(&env, address, new_loan.id, amount);
         Ok(new_loan.id)
@@ -304,16 +305,22 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         Ok(loan.amount + calculate_fees(&env, &loan))
     }
 
-    fn add_borrower(env: Env, borrower: Address) -> Result<(), LPError> {
+    fn add_borrower(env: Env, address: Address) -> Result<(), LPError> {
         let admin = check_admin(&env)?;
 
-        if has_borrower(&env, &borrower) {
+        if has_borrower(&env, &address) {
             return Err(LPError::BorrowerAlreadyRegistered);
         }
 
-        write_borrower(&env, &borrower, true);
+        let borrower = Borrower {
+            active: true,
+            min_withdraw: 0,
+            max_withdraw: 10000,
+        };
 
-        event::add_borrower(&env, admin, borrower);
+        write_borrower(&env, &address, borrower);
+
+        event::add_borrower(&env, admin, address);
         Ok(())
     }
 
@@ -324,7 +331,10 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BorrowerNotRegistered);
         }
 
-        write_borrower(&env, &address, active);
+        let mut borrower = read_borrower(&env, &address)?;
+        borrower.active = active;
+
+        write_borrower(&env, &address, borrower);
 
         event::set_borrower_status(&env, admin, address, active);
         Ok(())
