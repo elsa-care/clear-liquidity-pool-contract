@@ -5,6 +5,7 @@ use crate::storage::{
     has_borrower, has_lender, read_admin, read_borrower, read_contract_balance, read_contributions,
     read_lender, read_loans, read_token,
 };
+use crate::types::Borrower;
 use crate::LiquidityPoolContractClient;
 use soroban_sdk::{
     testutils::{Address as _, Events, Ledger},
@@ -143,7 +144,7 @@ impl LiquidityPoolContract {
         })
     }
 
-    pub fn read_borrower(&self, borrower: &Address) -> Result<bool, LPError> {
+    pub fn read_borrower(&self, borrower: &Address) -> Result<Borrower, LPError> {
         self.env.as_contract(&self.contract_id, || {
             let borrower = read_borrower(&self.env, borrower)?;
             Ok(borrower)
