@@ -253,12 +253,12 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         let admin_fees = total_fees / 10;
         let amount_for_lenders = amount - admin_fees;
 
-        token_transfer(&env, &borrower, &env.current_contract_address(), &amount);
-        token_transfer(&env, &env.current_contract_address(), &admin, &admin_fees);
+        token_transfer(&env, &borrower, &env.current_contract_address(), &amount)?;
+        token_transfer(&env, &env.current_contract_address(), &admin, &admin_fees)?;
 
         for (address, percentage) in loan.contributions.iter() {
             let mut lender = read_lender(&env, &address)?;
-            lender.balance += calculate_repayment_amount(amount, percentage);
+            lender.balance += calculate_repayment_amount(amount_for_lenders, percentage);
             write_lender(&env, &address, &lender);
         }
 
