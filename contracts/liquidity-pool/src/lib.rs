@@ -313,6 +313,9 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
     ) -> Result<(), LPError> {
         let admin = check_admin(&env)?;
 
+        check_nonnegative_amount(min_amount)?;
+        check_nonnegative_amount(max_amount)?;
+
         if has_borrower(&env, &address) {
             return Err(LPError::BorrowerAlreadyRegistered);
         }

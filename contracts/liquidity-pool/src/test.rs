@@ -1300,6 +1300,32 @@ fn test_add_registered_borrower() {
 }
 
 #[test]
+#[should_panic(expected = "Error(Contract, #2)")]
+fn test_add_borrower_limits_min_negative_amount() {
+    let setup = Setup::new();
+    setup.env.mock_all_auths();
+    let address = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&address, &-1i128, &1i128);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #2)")]
+fn test_add_borrower_limits_max_negative_amount() {
+    let setup = Setup::new();
+    setup.env.mock_all_auths();
+    let address = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&address, &1i128, &-1i128);
+}
+
+#[test]
 fn test_set_borrower_status() {
     let setup = Setup::new();
     setup.env.mock_all_auths();
