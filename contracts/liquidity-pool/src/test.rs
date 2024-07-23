@@ -518,7 +518,7 @@ fn test_loan() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     let loan_id = setup
         .liquid_contract
@@ -592,7 +592,7 @@ fn test_loan() {
                     setup.admin.into_val(&setup.env),
                     borrower.into_val(&setup.env),
                 ],
-                ().into_val(&setup.env)
+                (0i128, 100i128).into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -618,7 +618,7 @@ fn test_loan_negative_amount() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     setup
         .liquid_contract
@@ -647,7 +647,10 @@ fn test_loan_with_disable_borrower() {
     setup.env.mock_all_auths();
     let borrower = Address::generate(&setup.env);
 
-    setup.liquid_contract.client().add_borrower(&borrower);
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&borrower, &0i128, &100i128);
 
     setup
         .liquid_contract
@@ -683,7 +686,7 @@ fn test_request_two_loans() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     let first_loan_id = setup
         .liquid_contract
@@ -745,7 +748,7 @@ fn test_request_two_loans() {
                     setup.admin.into_val(&setup.env),
                     borrower.into_val(&setup.env),
                 ],
-                ().into_val(&setup.env)
+                (0i128, 100i128).into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -796,7 +799,10 @@ fn test_repay_loan_with_repayment_total_amount() {
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 10000i128);
 
-    setup.liquid_contract.client().add_borrower(&borrower);
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&borrower, &0i128, &100i128);
 
     let loan_id = setup.liquid_contract.client().loan(&borrower, &10000i128);
 
@@ -880,7 +886,7 @@ fn test_repay_loan_with_repayment_total_amount() {
                     setup.admin.into_val(&setup.env),
                     borrower.into_val(&setup.env),
                 ],
-                ().into_val(&setup.env)
+                (0i128, 100i128).into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -950,7 +956,7 @@ fn test_repay_loan_without_repayment_total_amount() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     let loan_id = setup
         .liquid_contract
@@ -1047,7 +1053,7 @@ fn test_repay_loan_without_repayment_total_amount() {
                     setup.admin.into_val(&setup.env),
                     borrower.into_val(&setup.env),
                 ],
-                ().into_val(&setup.env)
+                (0i128, 100i128).into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -1083,7 +1089,7 @@ fn test_repay_loan_negative_amount() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     setup
         .liquid_contract
@@ -1115,7 +1121,7 @@ fn test_repay_loan_without_active_loan() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     setup
         .liquid_contract
@@ -1147,7 +1153,10 @@ fn test_repay_loan_amount() {
 
     assert_eq!(setup.liquid_contract.read_contract_balance(), 1000i128);
 
-    setup.liquid_contract.client().add_borrower(&borrower);
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&borrower, &0i128, &100i128);
 
     let loan_id = setup
         .liquid_contract
@@ -1187,7 +1196,10 @@ fn test_repay_loan_amount_without_active_loan() {
     setup.env.mock_all_auths();
     let borrower = Address::generate(&setup.env);
 
-    setup.liquid_contract.client().add_borrower(&borrower);
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&borrower, &0i128, &100i128);
 
     setup
         .liquid_contract
@@ -1208,11 +1220,11 @@ fn test_add_borrower() {
             invoke: &MockAuthInvoke {
                 contract: &setup.liquid_contract_id,
                 fn_name: "add_borrower",
-                args: (borrower.clone(),).into_val(&setup.env),
+                args: (borrower.clone(), 0i128, 100i128).into_val(&setup.env),
                 sub_invokes: &[],
             },
         }])
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     let contract_events = setup.liquid_contract.get_contract_events();
 
@@ -1239,7 +1251,7 @@ fn test_add_borrower() {
                     setup.admin.into_val(&setup.env),
                     borrower.into_val(&setup.env),
                 ],
-                ().into_val(&setup.env)
+                (0i128, 100i128).into_val(&setup.env)
             )
         ]
     );
@@ -1260,11 +1272,11 @@ fn test_add_borrower_with_fake_admin() {
             invoke: &MockAuthInvoke {
                 contract: &setup.liquid_contract_id,
                 fn_name: "add_borrower",
-                args: (borrower.clone(),).into_val(&setup.env),
+                args: (borrower.clone(), 0i128, 100i128).into_val(&setup.env),
                 sub_invokes: &[],
             },
         }])
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 }
 
 #[test]
@@ -1278,13 +1290,13 @@ fn test_add_registered_borrower() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     setup
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 }
 
 #[test]
@@ -1293,7 +1305,10 @@ fn test_set_borrower_status() {
     setup.env.mock_all_auths();
     let borrower = Address::generate(&setup.env);
 
-    setup.liquid_contract.client().add_borrower(&borrower);
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&borrower, &0i128, &100i128);
 
     assert!(setup.liquid_contract.has_borrower(&borrower));
 
@@ -1328,7 +1343,7 @@ fn test_set_borrower_status() {
                     setup.admin.into_val(&setup.env),
                     borrower.into_val(&setup.env),
                 ],
-                ().into_val(&setup.env)
+                (0i128, 100i128).into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -1355,7 +1370,7 @@ fn test_set_borrower_status_with_fake_admin() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     assert!(setup.liquid_contract.has_borrower(&borrower));
 
@@ -1396,7 +1411,7 @@ fn test_remove_borrower() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     assert!(setup.liquid_contract.has_borrower(&borrower));
 
@@ -1439,7 +1454,7 @@ fn test_remove_borrower() {
                     setup.admin.into_val(&setup.env),
                     borrower.into_val(&setup.env),
                 ],
-                ().into_val(&setup.env)
+                (0i128, 100i128).into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -1466,7 +1481,7 @@ fn test_remove_borrower_with_fake_admin() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     assert!(setup.liquid_contract.has_borrower(&borrower));
 
