@@ -106,10 +106,10 @@ pub fn write_admin(env: &Env, admin: &Address) {
     env.storage().persistent().set(&DataKey::Admin, admin);
 }
 
-pub fn write_borrower(env: &Env, borrower: &Address, data: Borrower) {
+pub fn write_borrower(env: &Env, address: &Address, borrower: Borrower) {
     env.storage()
         .persistent()
-        .set(&DataKey::Borrower(borrower.clone()), &data);
+        .set(&DataKey::Borrower(address.clone()), &borrower);
 }
 
 pub fn write_contract_balance(env: &Env, amount: &i128) {
