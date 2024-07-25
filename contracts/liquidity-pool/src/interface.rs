@@ -28,7 +28,7 @@ pub trait LiquidityPoolTrait {
 
     fn set_borrower_limits(
         env: Env,
-        borrower: Address,
+        address: Address,
         min_amount: i128,
         max_amount: i128,
     ) -> Result<(), LPError>;

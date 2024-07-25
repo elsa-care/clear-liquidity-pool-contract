@@ -39,11 +39,11 @@ pub(crate) fn set_borrower_status(env: &Env, admin: Address, borrower: Address, 
 pub(crate) fn set_borrower_limits(
     env: &Env,
     admin: Address,
-    borrower: Address,
+    address: Address,
     limits: (i128, i128),
 ) {
     let topics: (Symbol, Address, Address) =
-        (Symbol::new(env, "set_borrower_limits"), admin, borrower);
+        (Symbol::new(env, "set_borrower_limits"), admin, address);
     env.events().publish(topics, limits);
 }
 
