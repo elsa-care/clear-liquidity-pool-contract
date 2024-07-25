@@ -1303,8 +1303,9 @@ fn test_set_borrower_status() {
         .set_borrower_status(&borrower, &false);
 
     let contract_events = setup.liquid_contract.get_contract_events();
+    let store_borrower = setup.liquid_contract.read_borrower(&borrower).unwrap();
 
-    assert_eq!(setup.liquid_contract.read_borrower(&borrower), Ok(false));
+    assert!(!store_borrower.active);
     assert_eq!(
         contract_events,
         vec![
