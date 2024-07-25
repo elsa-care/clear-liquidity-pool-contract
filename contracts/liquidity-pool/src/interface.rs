@@ -16,7 +16,7 @@ pub trait LiquidityPoolTrait {
 
     fn repay_loan_amount(env: Env, borrower: Address, loan_id: u64) -> Result<i128, LPError>;
 
-    fn loan_withdraw_limits(env: Env, borrower: Address) -> Result<(i128, i128), LPError>;
+    fn get_loan_wiithdraw_limit(env: Env, address: Address) -> Result<(i128, i128), LPError>;
 
     fn add_lender(env: Env, lender: Address) -> Result<(), LPError>;
 

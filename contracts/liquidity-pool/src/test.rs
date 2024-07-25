@@ -1196,7 +1196,7 @@ fn test_repay_loan_amount_without_active_loan() {
 }
 
 #[test]
-fn test_loan_withdraw_limits() {
+fn test_loan_wiithdraw_limit() {
     let setup = Setup::new();
     let borrower_address = Address::generate(&setup.env);
 
@@ -1215,12 +1215,12 @@ fn test_loan_withdraw_limits() {
             address: &borrower_address,
             invoke: &MockAuthInvoke {
                 contract: &setup.liquid_contract_id,
-                fn_name: "loan_withdraw_limits",
+                fn_name: "get_loan_wiithdraw_limit",
                 args: (borrower_address.clone(),).into_val(&setup.env),
                 sub_invokes: &[],
             },
         }])
-        .loan_withdraw_limits(&borrower_address);
+        .get_loan_wiithdraw_limit(&borrower_address);
 
     let borrower = setup
         .liquid_contract
@@ -1235,7 +1235,7 @@ fn test_loan_withdraw_limits() {
 
 #[test]
 #[should_panic(expected = "Unauthorized function call for address")]
-fn test_loan_withdraw_limits_with_unauthorized_borrower() {
+fn test_loan_wiithdraw_limit_with_unauthorized_borrower() {
     let setup = Setup::new();
     let borrower = Address::generate(&setup.env);
 
@@ -1254,17 +1254,17 @@ fn test_loan_withdraw_limits_with_unauthorized_borrower() {
             address: &setup.admin,
             invoke: &MockAuthInvoke {
                 contract: &setup.liquid_contract_id,
-                fn_name: "loan_withdraw_limits",
+                fn_name: "loan_wiithdraw_limit",
                 args: (borrower.clone(),).into_val(&setup.env),
                 sub_invokes: &[],
             },
         }])
-        .loan_withdraw_limits(&borrower);
+        .get_loan_wiithdraw_limit(&borrower);
 }
 
 #[test]
 #[should_panic(expected = "Error(Contract, #6)")]
-fn test_loan_withdraw_limits_unregistered_borrower() {
+fn test_loan_wiithdraw_limit_unregistered_borrower() {
     let setup = Setup::new();
     let borrower_address = Address::generate(&setup.env);
 
@@ -1272,7 +1272,7 @@ fn test_loan_withdraw_limits_unregistered_borrower() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .loan_withdraw_limits(&borrower_address);
+        .get_loan_wiithdraw_limit(&borrower_address);
 }
 
 #[test]
