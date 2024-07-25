@@ -321,22 +321,36 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         Ok((borrower.min_withdraw, borrower.max_withdraw))
     }
 
-    fn add_borrower(env: Env, address: Address) -> Result<(), LPError> {
+    fn add_borrower(
+        env: Env,
+        address: Address,
+        min_amount: i128,
+        max_amount: i128,
+    ) -> Result<(), LPError> {
         let admin = check_admin(&env)?;
+
+        check_nonnegative_amount(min_amount)?;
+        check_nonnegative_amount(max_amount)?;
 
         if has_borrower(&env, &address) {
             return Err(LPError::BorrowerAlreadyRegistered);
         }
 
+        let (min_withdraw, max_withdraw) = if min_amount <= max_amount {
+            (min_amount, max_amount)
+        } else {
+            (max_amount, min_amount)
+        };
+
         let borrower = Borrower {
             active: true,
-            min_withdraw: 0,
-            max_withdraw: 10000,
+            min_withdraw,
+            max_withdraw,
         };
 
         write_borrower(&env, &address, borrower);
 
-        event::add_borrower(&env, admin, address);
+        event::add_borrower(&env, admin, address, (min_withdraw, max_withdraw));
         Ok(())
     }
 
