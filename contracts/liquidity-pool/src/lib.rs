@@ -305,6 +305,18 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         Ok(loan.amount + calculate_fees(&env, &loan))
     }
 
+    fn get_loan_withdraw_limit(env: Env, address: Address) -> Result<(i128, i128), LPError> {
+        address.require_auth();
+
+        if !has_borrower(&env, &address) {
+            return Err(LPError::BorrowerNotRegistered);
+        }
+
+        let borrower = read_borrower(&env, &address)?;
+
+        Ok((borrower.min_withdraw, borrower.max_withdraw))
+    }
+
     fn add_borrower(env: Env, address: Address) -> Result<(), LPError> {
         let admin = check_admin(&env)?;
 
