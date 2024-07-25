@@ -1234,6 +1234,86 @@ fn test_repay_loan_amount_without_active_loan() {
 }
 
 #[test]
+fn test_loan_withdraw_limit() {
+    let setup = Setup::new();
+    let borrower_address = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_all_auths()
+        .add_borrower(&borrower_address);
+
+    assert!(setup.liquid_contract.has_borrower(&borrower_address));
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_auths(&[MockAuth {
+            address: &borrower_address,
+            invoke: &MockAuthInvoke {
+                contract: &setup.liquid_contract_id,
+                fn_name: "get_loan_withdraw_limit",
+                args: (borrower_address.clone(),).into_val(&setup.env),
+                sub_invokes: &[],
+            },
+        }])
+        .get_loan_withdraw_limit(&borrower_address);
+
+    let borrower = setup
+        .liquid_contract
+        .read_borrower(&borrower_address)
+        .unwrap();
+
+    assert_eq!(
+        (borrower.min_withdraw, borrower.max_withdraw),
+        (0i128, 10000i128)
+    );
+}
+
+#[test]
+#[should_panic(expected = "Unauthorized function call for address")]
+fn test_loan_withdraw_limit_with_unauthorized_borrower() {
+    let setup = Setup::new();
+    let borrower = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_all_auths()
+        .add_borrower(&borrower);
+
+    assert!(setup.liquid_contract.has_borrower(&borrower));
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_auths(&[MockAuth {
+            address: &setup.admin,
+            invoke: &MockAuthInvoke {
+                contract: &setup.liquid_contract_id,
+                fn_name: "loan_wiithdraw_limit",
+                args: (borrower.clone(),).into_val(&setup.env),
+                sub_invokes: &[],
+            },
+        }])
+        .get_loan_withdraw_limit(&borrower);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #6)")]
+fn test_loan_withdraw_limit_unregistered_borrower() {
+    let setup = Setup::new();
+    let borrower_address = Address::generate(&setup.env);
+
+    setup
+        .liquid_contract
+        .client()
+        .mock_all_auths()
+        .get_loan_withdraw_limit(&borrower_address);
+}
+
+#[test]
 fn test_add_borrower() {
     let setup = Setup::new();
     let borrower = Address::generate(&setup.env);
