@@ -305,7 +305,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         Ok(loan.amount + calculate_fees(&env, &loan))
     }
 
-    fn get_loan_wiithdraw_limit(env: Env, address: Address) -> Result<(i128, i128), LPError> {
+    fn get_loan_withdraw_limit(env: Env, address: Address) -> Result<(i128, i128), LPError> {
         address.require_auth();
 
         if !has_borrower(&env, &address) {

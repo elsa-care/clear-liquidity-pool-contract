@@ -1196,7 +1196,7 @@ fn test_repay_loan_amount_without_active_loan() {
 }
 
 #[test]
-fn test_loan_wiithdraw_limit() {
+fn test_loan_withdraw_limit() {
     let setup = Setup::new();
     let borrower_address = Address::generate(&setup.env);
 
@@ -1215,12 +1215,12 @@ fn test_loan_wiithdraw_limit() {
             address: &borrower_address,
             invoke: &MockAuthInvoke {
                 contract: &setup.liquid_contract_id,
-                fn_name: "get_loan_wiithdraw_limit",
+                fn_name: "get_loan_withdraw_limit",
                 args: (borrower_address.clone(),).into_val(&setup.env),
                 sub_invokes: &[],
             },
         }])
-        .get_loan_wiithdraw_limit(&borrower_address);
+        .get_loan_withdraw_limit(&borrower_address);
 
     let borrower = setup
         .liquid_contract
@@ -1235,7 +1235,7 @@ fn test_loan_wiithdraw_limit() {
 
 #[test]
 #[should_panic(expected = "Unauthorized function call for address")]
-fn test_loan_wiithdraw_limit_with_unauthorized_borrower() {
+fn test_loan_withdraw_limit_with_unauthorized_borrower() {
     let setup = Setup::new();
     let borrower = Address::generate(&setup.env);
 
@@ -1259,12 +1259,12 @@ fn test_loan_wiithdraw_limit_with_unauthorized_borrower() {
                 sub_invokes: &[],
             },
         }])
-        .get_loan_wiithdraw_limit(&borrower);
+        .get_loan_withdraw_limit(&borrower);
 }
 
 #[test]
 #[should_panic(expected = "Error(Contract, #6)")]
-fn test_loan_wiithdraw_limit_unregistered_borrower() {
+fn test_loan_withdraw_limit_unregistered_borrower() {
     let setup = Setup::new();
     let borrower_address = Address::generate(&setup.env);
 
@@ -1272,7 +1272,7 @@ fn test_loan_wiithdraw_limit_unregistered_borrower() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .get_loan_wiithdraw_limit(&borrower_address);
+        .get_loan_withdraw_limit(&borrower_address);
 }
 
 #[test]
