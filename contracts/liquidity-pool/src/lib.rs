@@ -207,6 +207,10 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BorrowerDisabled);
         }
 
+        if amount < borrower.min_withdraw || amount > borrower.max_withdraw {
+            return Err(LPError::LoanAmountOutsideWithdrawalLimits);
+        }
+
         let total_balance = read_contract_balance(&env);
 
         if amount > total_balance {
@@ -349,6 +353,38 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_borrower(&env, &address, borrower);
 
         event::set_borrower_status(&env, admin, address, active);
+        Ok(())
+    }
+
+    fn set_borrower_limits(
+        env: Env,
+        address: Address,
+        min_amount: i128,
+        max_amount: i128,
+    ) -> Result<(), LPError> {
+        let admin = check_admin(&env)?;
+
+        check_nonnegative_amount(min_amount)?;
+        check_nonnegative_amount(max_amount)?;
+
+        if !has_borrower(&env, &address) {
+            return Err(LPError::BorrowerNotRegistered);
+        }
+
+        let mut borrower = read_borrower(&env, &address)?;
+
+        let (min_withdraw, max_withdraw) = if min_amount <= max_amount {
+            (min_amount, max_amount)
+        } else {
+            (max_amount, min_amount)
+        };
+
+        borrower.min_withdraw = min_withdraw;
+        borrower.max_withdraw = max_withdraw;
+
+        write_borrower(&env, &address, borrower);
+
+        event::set_borrower_limits(&env, admin, address, (min_withdraw, max_withdraw));
         Ok(())
     }
 
