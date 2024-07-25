@@ -25,8 +25,8 @@ pub(crate) fn repay_loan(env: &Env, to: Address, loan_id: u64, amount: i128) {
     env.events().publish(topics, amount);
 }
 
-pub(crate) fn add_borrower(env: &Env, admin: Address, borrower: Address, limits: (i128, i128)) {
-    let topics = (Symbol::new(env, "add_borrower"), admin, borrower);
+pub(crate) fn add_borrower(env: &Env, admin: Address, address: Address, limits: (i128, i128)) {
+    let topics = (Symbol::new(env, "add_borrower"), admin, address);
     env.events().publish(topics, limits);
 }
 
