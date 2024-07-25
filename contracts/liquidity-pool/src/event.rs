@@ -36,6 +36,17 @@ pub(crate) fn set_borrower_status(env: &Env, admin: Address, borrower: Address, 
     env.events().publish(topics, active);
 }
 
+pub(crate) fn set_borrower_limits(
+    env: &Env,
+    admin: Address,
+    address: Address,
+    limits: (i128, i128),
+) {
+    let topics: (Symbol, Address, Address) =
+        (Symbol::new(env, "set_borrower_limits"), admin, address);
+    env.events().publish(topics, limits);
+}
+
 pub(crate) fn remove_borrower(env: &Env, admin: Address, borrower: Address) {
     let topics = (Symbol::new(env, "remove_borrower"), admin, borrower);
     env.events().publish(topics, ());
