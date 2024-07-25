@@ -667,7 +667,10 @@ fn test_loan_with_amount_less_than_min_withdraw() {
     setup.env.mock_all_auths();
     let address = Address::generate(&setup.env);
 
-    setup.liquid_contract.client().add_borrower(&address);
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&address, &0i128, &100i128);
 
     assert!(setup.liquid_contract.has_borrower(&address));
 
@@ -686,7 +689,10 @@ fn test_loan_with_amount_greater_than_max_withdraw() {
     setup.env.mock_all_auths();
     let address = Address::generate(&setup.env);
 
-    setup.liquid_contract.client().add_borrower(&address);
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&address, &0i128, &100i128);
 
     assert!(setup.liquid_contract.has_borrower(&address));
 
@@ -840,7 +846,7 @@ fn test_repay_loan_with_repayment_total_amount() {
     setup
         .liquid_contract
         .client()
-        .add_borrower(&borrower, &0i128, &100i128);
+        .add_borrower(&borrower, &0i128, &10010i128);
 
     let loan_id = setup.liquid_contract.client().loan(&borrower, &10000i128);
 
@@ -924,7 +930,7 @@ fn test_repay_loan_with_repayment_total_amount() {
                     setup.admin.into_val(&setup.env),
                     borrower.into_val(&setup.env),
                 ],
-                (0i128, 100i128).into_val(&setup.env)
+                (0i128, 10010i128).into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -994,7 +1000,7 @@ fn test_repay_loan_without_repayment_total_amount() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower, &0i128, &100i128);
+        .add_borrower(&borrower, &0i128, &10010i128);
 
     let loan_id = setup
         .liquid_contract
@@ -1091,7 +1097,7 @@ fn test_repay_loan_without_repayment_total_amount() {
                     setup.admin.into_val(&setup.env),
                     borrower.into_val(&setup.env),
                 ],
-                (0i128, 100i128).into_val(&setup.env)
+                (0i128, 10010i128).into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -1194,7 +1200,7 @@ fn test_repay_loan_amount() {
     setup
         .liquid_contract
         .client()
-        .add_borrower(&borrower, &0i128, &100i128);
+        .add_borrower(&borrower, &0i128, &10010i128);
 
     let loan_id = setup
         .liquid_contract
@@ -1254,7 +1260,7 @@ fn test_loan_withdraw_limit() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower_address);
+        .add_borrower(&borrower_address, &0i128, &100i128);
 
     assert!(setup.liquid_contract.has_borrower(&borrower_address));
 
@@ -1279,7 +1285,7 @@ fn test_loan_withdraw_limit() {
 
     assert_eq!(
         (borrower.min_withdraw, borrower.max_withdraw),
-        (0i128, 10000i128)
+        (0i128, 100i128)
     );
 }
 
@@ -1293,7 +1299,7 @@ fn test_loan_withdraw_limit_with_unauthorized_borrower() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     assert!(setup.liquid_contract.has_borrower(&borrower));
 
@@ -1552,7 +1558,10 @@ fn test_set_borrower_limits() {
     setup.env.mock_all_auths();
     let address = Address::generate(&setup.env);
 
-    setup.liquid_contract.client().add_borrower(&address);
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&address, &0i128, &100i128);
 
     assert!(setup.liquid_contract.has_borrower(&address));
 
@@ -1590,7 +1599,7 @@ fn test_set_borrower_limits() {
                     setup.admin.into_val(&setup.env),
                     address.into_val(&setup.env),
                 ],
-                ().into_val(&setup.env)
+                (0i128, 100i128).into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -1612,7 +1621,10 @@ fn test_set_borrower_limits_when_min_greater_than_max() {
     setup.env.mock_all_auths();
     let address = Address::generate(&setup.env);
 
-    setup.liquid_contract.client().add_borrower(&address);
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&address, &0i128, &100i128);
 
     assert!(setup.liquid_contract.has_borrower(&address));
 
@@ -1650,7 +1662,7 @@ fn test_set_borrower_limits_when_min_greater_than_max() {
                     setup.admin.into_val(&setup.env),
                     address.into_val(&setup.env),
                 ],
-                ().into_val(&setup.env)
+                (0i128, 100i128).into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -1677,7 +1689,7 @@ fn test_set_borrower_limits_with_fake_admin() {
         .liquid_contract
         .client()
         .mock_all_auths()
-        .add_borrower(&borrower);
+        .add_borrower(&borrower, &0i128, &100i128);
 
     assert!(setup.liquid_contract.has_borrower(&borrower));
 
