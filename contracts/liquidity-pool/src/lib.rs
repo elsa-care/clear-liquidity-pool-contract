@@ -17,7 +17,7 @@ use crate::storage::{
     remove_borrower, remove_lender, remove_lender_contribution, write_admin, write_borrower,
     write_contract_balance, write_lender, write_lender_contribution, write_loans, write_token,
 };
-use crate::types::{Lender, Loan};
+use crate::types::{Lender, LenderStatus, Loan};
 
 use soroban_sdk::{
     contract, contractimpl, contractmeta,
@@ -65,15 +65,14 @@ fn update_lender_balances(
     lenders: Vec<Address>,
     new_lender_amounts: Map<Address, i128>,
 ) -> Result<(), LPError> {
-    for lender in lenders.iter() {
-        match new_lender_amounts.try_get(lender.clone()) {
+    for address in lenders.iter() {
+        match new_lender_amounts.try_get(address.clone()) {
             Ok(Some(new_lender_balance)) => {
-                let data = Lender {
-                    active: true,
-                    balance: new_lender_balance,
-                };
+                let mut lender = read_lender(env, &address)?;
+                lender.balance = new_lender_balance;
+                lender.active_loans += 1;
 
-                write_lender(env, &lender, &data);
+                write_lender(env, &address, &lender);
             }
             Ok(None) => {
                 return Err(LPError::LenderNotFoundInContributions);
@@ -132,9 +131,9 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         }
 
         let mut lender = read_lender(&env, &address)?;
-        if !lender.active {
+        if lender.status != LenderStatus::Enabled {
             return Err(LPError::LenderDisabled);
-        }
+        };
 
         token_transfer(&env, &address, &env.current_contract_address(), &amount)?;
 
@@ -266,6 +265,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         for (address, percentage) in loan.contributions.iter() {
             let mut lender = read_lender(&env, &address)?;
+            lender.active_loans -= 1;
             lender.balance += calculate_repayment_amount(amount_for_lenders, percentage);
             write_lender(&env, &address, &lender);
         }
@@ -351,8 +351,9 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         }
 
         let data = Lender {
-            active: true,
-            balance: 0i128,
+            status: LenderStatus::Enabled,
+            balance: 0,
+            active_loans: 0,
         };
 
         write_lender(&env, &lender, &data);
@@ -369,11 +370,15 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         }
 
         let mut lender = read_lender(&env, &address)?;
-        lender.active = active;
+        lender.status = if active {
+            LenderStatus::Enabled
+        } else {
+            LenderStatus::Disabled
+        };
 
         let mut contributions = read_contributions(&env);
 
-        if lender.active {
+        if lender.status == LenderStatus::Enabled {
             if !contributions.contains(&address) {
                 contributions.push_back(address.clone());
             }
@@ -387,7 +392,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         write_lender(&env, &address, &lender);
         write_lender_contribution(&env, contributions);
 
-        event::set_lender_status(&env, admin, address, active);
+        event::set_lender_status(&env, admin, address, lender.status);
         Ok(())
     }
 
