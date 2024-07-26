@@ -16,15 +16,24 @@ pub trait LiquidityPoolTrait {
 
     fn repay_loan_amount(env: Env, borrower: Address, loan_id: u64) -> Result<i128, LPError>;
 
+    fn get_loan_withdraw_limit(env: Env, address: Address) -> Result<(i128, i128), LPError>;
+
     fn add_lender(env: Env, lender: Address) -> Result<(), LPError>;
 
     fn set_lender_status(env: Env, lender: Address, active: bool) -> Result<(), LPError>;
 
     fn remove_lender(env: Env, lender: Address) -> Result<(), LPError>;
 
-    fn add_borrower(env: Env, borrower: Address) -> Result<(), LPError>;
+    fn add_borrower(env: Env, address: Address, min: i128, max: i128) -> Result<(), LPError>;
 
     fn set_borrower_status(env: Env, borrower: Address, active: bool) -> Result<(), LPError>;
+
+    fn set_borrower_limits(
+        env: Env,
+        address: Address,
+        min_amount: i128,
+        max_amount: i128,
+    ) -> Result<(), LPError>;
 
     fn remove_borrower(env: Env, lender: Address) -> Result<(), LPError>;
 }

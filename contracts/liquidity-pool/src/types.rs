@@ -28,6 +28,14 @@ pub struct Lender {
 
 #[derive(Clone)]
 #[contracttype]
+pub struct Borrower {
+    pub active: bool,
+    pub min_withdraw: i128,
+    pub max_withdraw: i128,
+}
+
+#[derive(Clone)]
+#[contracttype]
 pub enum DataKey {
     TotalBalance,
     Token,

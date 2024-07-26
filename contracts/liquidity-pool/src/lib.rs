@@ -17,7 +17,7 @@ use crate::storage::{
     remove_borrower, remove_lender, remove_lender_contribution, write_admin, write_borrower,
     write_contract_balance, write_lender, write_lender_contribution, write_loans, write_token,
 };
-use crate::types::{Lender, LenderStatus, Loan};
+use crate::types::{Borrower, Lender, LenderStatus, Loan};
 
 use soroban_sdk::{
     contract, contractimpl, contractmeta,
@@ -200,8 +200,14 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BorrowerNotRegistered);
         }
 
-        if !read_borrower(&env, &address)? {
+        let borrower = read_borrower(&env, &address)?;
+
+        if !borrower.active {
             return Err(LPError::BorrowerDisabled);
+        }
+
+        if amount < borrower.min_withdraw || amount > borrower.max_withdraw {
+            return Err(LPError::LoanAmountOutsideWithdrawalLimits);
         }
 
         let total_balance = read_contract_balance(&env);
@@ -232,7 +238,6 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         write_contract_balance(&env, &(total_balance - amount));
         write_loans(&env, &address, &loans);
-        write_borrower(&env, &address, true);
 
         event::loan(&env, address, new_loan.id, amount);
         Ok(new_loan.id)
@@ -304,16 +309,48 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         Ok(loan.amount + calculate_fees(&env, &loan))
     }
 
-    fn add_borrower(env: Env, borrower: Address) -> Result<(), LPError> {
+    fn get_loan_withdraw_limit(env: Env, address: Address) -> Result<(i128, i128), LPError> {
+        address.require_auth();
+
+        if !has_borrower(&env, &address) {
+            return Err(LPError::BorrowerNotRegistered);
+        }
+
+        let borrower = read_borrower(&env, &address)?;
+
+        Ok((borrower.min_withdraw, borrower.max_withdraw))
+    }
+
+    fn add_borrower(
+        env: Env,
+        address: Address,
+        min_amount: i128,
+        max_amount: i128,
+    ) -> Result<(), LPError> {
         let admin = check_admin(&env)?;
 
-        if has_borrower(&env, &borrower) {
+        check_nonnegative_amount(min_amount)?;
+        check_nonnegative_amount(max_amount)?;
+
+        if has_borrower(&env, &address) {
             return Err(LPError::BorrowerAlreadyRegistered);
         }
 
-        write_borrower(&env, &borrower, true);
+        let (min_withdraw, max_withdraw) = if min_amount <= max_amount {
+            (min_amount, max_amount)
+        } else {
+            (max_amount, min_amount)
+        };
 
-        event::add_borrower(&env, admin, borrower);
+        let borrower = Borrower {
+            active: true,
+            min_withdraw,
+            max_withdraw,
+        };
+
+        write_borrower(&env, &address, borrower);
+
+        event::add_borrower(&env, admin, address, (min_withdraw, max_withdraw));
         Ok(())
     }
 
@@ -324,9 +361,44 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BorrowerNotRegistered);
         }
 
-        write_borrower(&env, &address, active);
+        let mut borrower = read_borrower(&env, &address)?;
+        borrower.active = active;
+
+        write_borrower(&env, &address, borrower);
 
         event::set_borrower_status(&env, admin, address, active);
+        Ok(())
+    }
+
+    fn set_borrower_limits(
+        env: Env,
+        address: Address,
+        min_amount: i128,
+        max_amount: i128,
+    ) -> Result<(), LPError> {
+        let admin = check_admin(&env)?;
+
+        check_nonnegative_amount(min_amount)?;
+        check_nonnegative_amount(max_amount)?;
+
+        if !has_borrower(&env, &address) {
+            return Err(LPError::BorrowerNotRegistered);
+        }
+
+        let mut borrower = read_borrower(&env, &address)?;
+
+        let (min_withdraw, max_withdraw) = if min_amount <= max_amount {
+            (min_amount, max_amount)
+        } else {
+            (max_amount, min_amount)
+        };
+
+        borrower.min_withdraw = min_withdraw;
+        borrower.max_withdraw = max_withdraw;
+
+        write_borrower(&env, &address, borrower);
+
+        event::set_borrower_limits(&env, admin, address, (min_withdraw, max_withdraw));
         Ok(())
     }
 

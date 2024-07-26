@@ -34,15 +34,26 @@ pub(crate) fn repay_loan(env: &Env, to: Address, loan_id: u64, amount: i128) {
     env.events().publish(topics, amount);
 }
 
-pub(crate) fn add_borrower(env: &Env, admin: Address, borrower: Address) {
-    let topics = (Symbol::new(env, "add_borrower"), admin, borrower);
-    env.events().publish(topics, ());
+pub(crate) fn add_borrower(env: &Env, admin: Address, address: Address, limits: (i128, i128)) {
+    let topics = (Symbol::new(env, "add_borrower"), admin, address);
+    env.events().publish(topics, limits);
 }
 
 pub(crate) fn set_borrower_status(env: &Env, admin: Address, borrower: Address, active: bool) {
     let topics: (Symbol, Address, Address) =
         (Symbol::new(env, "set_borrower_status"), admin, borrower);
     env.events().publish(topics, active);
+}
+
+pub(crate) fn set_borrower_limits(
+    env: &Env,
+    admin: Address,
+    address: Address,
+    limits: (i128, i128),
+) {
+    let topics: (Symbol, Address, Address) =
+        (Symbol::new(env, "set_borrower_limits"), admin, address);
+    env.events().publish(topics, limits);
 }
 
 pub(crate) fn remove_borrower(env: &Env, admin: Address, borrower: Address) {
