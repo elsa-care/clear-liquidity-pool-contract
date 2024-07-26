@@ -2039,7 +2039,10 @@ fn test_remove_lender_with_pending_status() {
         .client()
         .deposit(&lender_address, &10i128);
 
-    setup.liquid_contract.client().add_borrower(&borrower);
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&borrower, &0i128, &10i128);
 
     let loan_id = setup.liquid_contract.client().loan(&borrower, &5i128);
 
@@ -2096,7 +2099,7 @@ fn test_remove_lender_with_pending_status() {
                     setup.admin.into_val(&setup.env),
                     borrower.into_val(&setup.env),
                 ],
-                ().into_val(&setup.env)
+                (0i128, 10i128).into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
@@ -2141,7 +2144,10 @@ fn test_remove_lender_with_repay_loan() {
         .client()
         .deposit(&lender_address, &10i128);
 
-    setup.liquid_contract.client().add_borrower(&borrower);
+    setup
+        .liquid_contract
+        .client()
+        .add_borrower(&borrower, &0i128, &10i128);
 
     let loan_id = setup.liquid_contract.client().loan(&borrower, &5i128);
 
@@ -2207,7 +2213,7 @@ fn test_remove_lender_with_repay_loan() {
                     setup.admin.into_val(&setup.env),
                     borrower.into_val(&setup.env),
                 ],
-                ().into_val(&setup.env)
+                (0i128, 10i128).into_val(&setup.env)
             ),
             (
                 setup.liquid_contract_id.clone(),
