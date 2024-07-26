@@ -13,9 +13,9 @@ use crate::interface::LiquidityPoolTrait;
 use crate::percentage::{calculate_repayment_amount, process_lender_contribution};
 use crate::storage::{
     check_admin, has_admin, has_borrower, has_lender, read_admin, read_borrower,
-    read_contract_balance, read_contributions, read_lender, read_loans, read_token,
-    remove_borrower, remove_lender, remove_lender_contribution, write_admin, write_borrower,
-    write_contract_balance, write_lender, write_lender_contribution, write_loans, write_token,
+    read_contract_balance, read_contributions, read_lender, read_loan, read_token, remove_borrower,
+    remove_lender, remove_lender_contribution, remove_loan, write_admin, write_borrower,
+    write_contract_balance, write_lender, write_lender_contribution, write_loan, write_token,
 };
 use crate::types::{Borrower, Lender, Loan};
 
@@ -41,15 +41,6 @@ fn calculate_fees(env: &Env, loan: &Loan) -> i128 {
     let duration_days = (now_ledger - start_time) / seconds_per_day;
 
     loan.amount * (interest_rate_per_day * duration_days) as i128 / 100_000
-}
-
-fn generate_id(env: &Env, loans: &Vec<Loan>) -> u64 {
-    loop {
-        let new_id = env.prng().gen();
-        if !loans.iter().any(|loan| loan.id == new_id) {
-            return new_id;
-        }
-    }
 }
 
 fn check_nonnegative_amount(amount: i128) -> Result<(), LPError> {
@@ -224,24 +215,19 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         let (lender_contributions, new_lender_amounts) =
             process_lender_contribution(&env, lenders.clone(), &amount, &total_balance)?;
 
-        let mut loans = read_loans(&env, &address);
-
+        let loan_id = env.prng().gen();
         let new_loan = Loan {
-            id: generate_id(&env, &loans),
             amount,
             start_time: env.ledger().timestamp(),
             contributions: lender_contributions,
         };
 
-        loans.push_back(new_loan.clone());
-
         update_lender_balances(&env, lenders, new_lender_amounts)?;
-
         write_contract_balance(&env, &(total_balance - amount));
-        write_loans(&env, &address, &loans);
+        write_loan(&env, &address, &loan_id, &new_loan);
 
-        event::loan(&env, address, new_loan.id, amount);
-        Ok(new_loan.id)
+        event::loan(&env, address, loan_id, amount);
+        Ok(loan_id)
     }
 
     fn repay_loan(env: Env, borrower: Address, loan_id: u64, amount: i128) -> Result<(), LPError> {
@@ -253,13 +239,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BorrowerNotRegistered);
         }
 
-        let mut loans = read_loans(&env, &borrower);
-        let (loan_index, mut loan) = loans
-            .iter()
-            .enumerate()
-            .find(|(_, loan)| loan.id == loan_id)
-            .map(|(index, loan)| (index, loan.clone()))
-            .ok_or(LPError::LoanNotFoundOrExists)?;
+        let mut loan = read_loan(&env, &borrower, &loan_id)?;
 
         let admin = read_admin(&env)?;
         let total_fees = calculate_fees(&env, &loan);
@@ -281,12 +261,11 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         if (repay_loan_amount - amount) > 0 {
             loan.amount = repay_loan_amount - amount;
-            loans.set(loan_index as u32, loan);
+            write_loan(&env, &borrower, &loan_id, &loan);
         } else {
-            loans.remove(loan_index as u32);
+            remove_loan(&env, &borrower, &loan_id);
         }
 
-        write_loans(&env, &borrower, &loans);
         write_contract_balance(&env, &total_balance);
 
         event::repay_loan(&env, borrower, loan_id, amount);
@@ -300,11 +279,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BorrowerNotRegistered);
         }
 
-        let loans = read_loans(&env, &borrower);
-        let loan = loans
-            .iter()
-            .find(|loan| loan.id == loan_id)
-            .ok_or(LPError::LoanNotFoundOrExists)?;
+        let loan = read_loan(&env, &borrower, &loan_id)?;
 
         Ok(loan.amount + calculate_fees(&env, &loan))
     }
