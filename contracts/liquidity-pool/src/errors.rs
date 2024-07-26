@@ -22,4 +22,5 @@ pub enum LPError {
     LenderDisabled = 16,
     BorrowerNotFound = 17,
     BorrowerDisabled = 18,
+    LoanAmountOutsideWithdrawalLimits = 19,
 }
