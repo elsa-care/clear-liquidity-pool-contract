@@ -8,11 +8,21 @@ pub struct Loan {
     pub contributions: Map<Address, i64>,
 }
 
+#[derive(Clone, PartialEq, Debug)]
+#[contracttype]
+#[repr(u32)]
+pub enum LenderStatus {
+    Enabled,
+    Disabled,
+    PendingRemoval,
+}
+
 #[derive(Clone)]
 #[contracttype]
 pub struct Lender {
-    pub active: bool,
+    pub status: LenderStatus,
     pub balance: i128,
+    pub active_loans: u32,
 }
 
 #[derive(Clone)]

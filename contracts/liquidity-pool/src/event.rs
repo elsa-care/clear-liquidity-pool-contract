@@ -1,4 +1,13 @@
+use crate::types::LenderStatus;
 use soroban_sdk::{Address, Env, Symbol};
+
+pub fn lender_status_to_string(status: LenderStatus) -> &'static str {
+    match status {
+        LenderStatus::Enabled => "enabled",
+        LenderStatus::Disabled => "disabled",
+        LenderStatus::PendingRemoval => "pending_removal",
+    }
+}
 
 pub(crate) fn initialize(env: &Env, admin: Address, token: Address) {
     let topics = (Symbol::new(env, "initialize"), admin, token);
@@ -57,9 +66,10 @@ pub(crate) fn add_lender(env: &Env, admin: Address, lender: Address) {
     env.events().publish(topics, ());
 }
 
-pub(crate) fn set_lender_status(env: &Env, admin: Address, lender: Address, active: bool) {
+pub(crate) fn set_lender_status(env: &Env, admin: Address, lender: Address, status: LenderStatus) {
     let topics = (Symbol::new(env, "set_lender_status"), admin, lender);
-    env.events().publish(topics, active);
+    env.events()
+        .publish(topics, lender_status_to_string(status));
 }
 
 pub(crate) fn remove_lender(env: &Env, admin: Address, lender: Address) {
