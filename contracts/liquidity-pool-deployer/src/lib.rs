@@ -13,7 +13,13 @@ pub struct LiquidityPoolDeployer;
 
 #[contractimpl]
 impl LiquidityPoolDeployer {
-    pub fn deploy(env: Env, admin: Address, salt: BytesN<32>, token: Address) -> (Address, Val) {
+    pub fn deploy(
+        env: Env,
+        admin: Address,
+        salt: BytesN<32>,
+        token: Address,
+        vault: Address,
+    ) -> (Address, Val) {
         if admin != env.current_contract_address() {
             admin.require_auth();
         }
@@ -22,7 +28,7 @@ impl LiquidityPoolDeployer {
 
         let deployed_address = env.deployer().with_current_contract(salt).deploy(wasm_hash);
 
-        let init_args = (admin, token).into_val(&env);
+        let init_args = (admin, token, vault).into_val(&env);
 
         let contract: Val = env.invoke_contract(
             &deployed_address,

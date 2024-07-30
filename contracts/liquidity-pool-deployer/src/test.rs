@@ -29,11 +29,12 @@ fn test_deploy_from_contract() {
     let salt = BytesN::from_array(&env, &[0; 32]);
     let admin = Address::generate(&env);
     let token_admin = Address::generate(&env);
+    let vault = Address::generate(&env);
 
     let (token, _token_client) = create_token_contract(&env, &token_admin);
 
     env.mock_all_auths();
-    let (contract_id, _contract) = deployer_client.deploy(&admin, &salt, &token.address);
+    let (contract_id, _contract) = deployer_client.deploy(&admin, &salt, &token.address, &vault);
 
     let client = liquidity_pool::Client::new(&env, &contract_id);
     let total_balance = client.balance(&admin);
