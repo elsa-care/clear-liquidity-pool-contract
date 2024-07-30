@@ -3,7 +3,6 @@ use soroban_sdk::{contracttype, Address, Map};
 #[derive(Clone)]
 #[contracttype]
 pub struct Loan {
-    pub id: u64,
     pub amount: i128,
     pub start_time: u64,
     pub contributions: Map<Address, i64>,
@@ -43,5 +42,5 @@ pub enum DataKey {
     Contribution,
     Borrower(Address),
     Lender(Address),
-    Loan(Address),
+    Loan(u64, Address),
 }

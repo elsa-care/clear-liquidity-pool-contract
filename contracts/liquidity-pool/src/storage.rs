@@ -55,11 +55,11 @@ pub fn read_contributions(env: &Env) -> Vec<Address> {
         .unwrap_or(Vec::new(env))
 }
 
-pub fn read_loans(env: &Env, borrower: &Address) -> Vec<Loan> {
+pub fn read_loan(env: &Env, address: &Address, loan_id: &u64) -> Result<Loan, LPError> {
     env.storage()
         .persistent()
-        .get(&DataKey::Loan(borrower.clone()))
-        .unwrap_or(Vec::new(env))
+        .get(&DataKey::Loan(*loan_id, address.clone()))
+        .ok_or(LPError::LoanNotFoundOrExists)
 }
 
 pub fn read_lender(env: &Env, lender: &Address) -> Result<Lender, LPError> {
@@ -80,6 +80,12 @@ pub fn remove_borrower(env: &Env, borrower: &Address) {
     env.storage()
         .persistent()
         .remove(&DataKey::Borrower(borrower.clone()))
+}
+
+pub fn remove_loan(env: &Env, address: &Address, loan_id: &u64) {
+    env.storage()
+        .persistent()
+        .remove(&DataKey::Loan(*loan_id, address.clone()));
 }
 
 pub fn remove_lender(env: &Env, lender: &Address) {
@@ -118,10 +124,10 @@ pub fn write_contract_balance(env: &Env, amount: &i128) {
         .set(&DataKey::TotalBalance, amount);
 }
 
-pub fn write_loans(env: &Env, borrower: &Address, loans: &Vec<Loan>) {
+pub fn write_loan(env: &Env, address: &Address, loan_id: &u64, loan: &Loan) {
     env.storage()
         .persistent()
-        .set(&DataKey::Loan(borrower.clone()), loans);
+        .set(&DataKey::Loan(*loan_id, address.clone()), loan);
 }
 
 pub fn write_lender(env: &Env, lender: &Address, data: &Lender) {
