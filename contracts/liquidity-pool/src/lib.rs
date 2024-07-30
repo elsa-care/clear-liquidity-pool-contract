@@ -263,21 +263,35 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         let admin = read_admin(&env)?;
         let total_fees = calculate_fees(&env, &loan);
         let admin_fees = total_fees / 10;
-        let amount_for_lenders = amount - admin_fees;
+        let mut amount_for_lenders = amount - admin_fees;
 
         token_transfer(&env, &borrower, &env.current_contract_address(), &amount)?;
         token_transfer(&env, &env.current_contract_address(), &admin, &admin_fees)?;
+
+        let mut total_balance = read_contract_balance(&env);
 
         for (address, percentage) in loan.contributions.iter() {
             let mut lender = read_lender(&env, &address)?;
             lender.active_loans -= 1;
             lender.balance += calculate_repayment_amount(amount_for_lenders, percentage);
-            write_lender(&env, &address, &lender);
+
+            if lender.active_loans == 0 && lender.status == LenderStatus::PendingRemoval {
+                token_transfer(
+                    &env,
+                    &env.current_contract_address(),
+                    &address,
+                    &lender.balance,
+                )?;
+
+                amount_for_lenders -= lender.balance;
+                remove_lender(&env, &address);
+            } else {
+                write_lender(&env, &address, &lender);
+            }
         }
 
         let repay_loan_amount = loan.amount + calculate_fees(&env, &loan);
-        let mut total_balance = read_contract_balance(&env);
-        total_balance += amount;
+        total_balance += amount_for_lenders;
 
         if (repay_loan_amount - amount) > 0 {
             loan.amount = repay_loan_amount - amount;
@@ -468,17 +482,40 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         Ok(())
     }
 
-    fn remove_lender(env: Env, lender: Address) -> Result<(), LPError> {
+    fn remove_lender(env: Env, address: Address) -> Result<(), LPError> {
         let admin = check_admin(&env)?;
 
-        if !has_lender(&env, &lender) {
+        if !has_lender(&env, &address) {
             return Err(LPError::LenderNotRegistered);
         }
 
-        remove_lender(&env, &lender);
-        remove_lender_contribution(&env, &lender)?;
+        let mut total_balance = read_contract_balance(&env);
+        let mut lender = read_lender(&env, &address)?;
 
-        event::remove_lender(&env, admin, lender);
+        if lender.balance > total_balance {
+            return Err(LPError::BalanceNotAvailableForAmountRequested);
+        }
+
+        token_transfer(
+            &env,
+            &env.current_contract_address(),
+            &address,
+            &lender.balance,
+        )?;
+
+        total_balance -= lender.balance;
+
+        if lender.active_loans > 0 {
+            lender.status = LenderStatus::PendingRemoval;
+            write_lender(&env, &address, &lender);
+        } else {
+            remove_lender(&env, &address);
+        }
+
+        write_contract_balance(&env, &total_balance);
+        remove_lender_contribution(&env, &address)?;
+
+        event::remove_lender(&env, admin, address);
         Ok(())
     }
 }
