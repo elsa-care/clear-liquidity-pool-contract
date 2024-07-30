@@ -13,9 +13,10 @@ use crate::interface::LiquidityPoolTrait;
 use crate::percentage::{calculate_repayment_amount, process_lender_contribution};
 use crate::storage::{
     check_admin, has_admin, has_borrower, has_lender, read_admin, read_borrower,
-    read_contract_balance, read_contributions, read_lender, read_loan, read_token, remove_borrower,
-    remove_lender, remove_lender_contribution, remove_loan, write_admin, write_borrower,
-    write_contract_balance, write_lender, write_lender_contribution, write_loan, write_token,
+    read_contract_balance, read_contributions, read_lender, read_loan, read_token, read_vault,
+    remove_borrower, remove_lender, remove_lender_contribution, remove_loan, write_admin,
+    write_borrower, write_contract_balance, write_lender, write_lender_contribution, write_loan,
+    write_token, write_vault,
 };
 use crate::types::{Borrower, Lender, LenderStatus, Loan};
 
@@ -86,16 +87,17 @@ pub struct LiquidityPoolContract;
 
 #[contractimpl]
 impl LiquidityPoolTrait for LiquidityPoolContract {
-    fn initialize(env: Env, admin: Address, token: Address) -> Result<(), LPError> {
+    fn initialize(env: Env, admin: Address, token: Address, vault: Address) -> Result<(), LPError> {
         if has_admin(&env) {
             return Err(LPError::AlreadyInitialized);
         }
 
         write_admin(&env, &admin);
         write_token(&env, &token);
+        write_vault(&env, &vault);
         write_contract_balance(&env, &0i128);
 
-        event::initialize(&env, admin, token);
+        event::initialize(&env, admin, token, vault);
         Ok(())
     }
 
@@ -240,13 +242,13 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         let mut loan = read_loan(&env, &borrower, &loan_id)?;
 
-        let admin = read_admin(&env)?;
+        let vault = read_vault(&env)?;
         let total_fees = calculate_fees(&env, &loan);
         let admin_fees = total_fees / 10;
         let mut amount_for_lenders = amount - admin_fees;
 
         token_transfer(&env, &borrower, &env.current_contract_address(), &amount)?;
-        token_transfer(&env, &env.current_contract_address(), &admin, &admin_fees)?;
+        token_transfer(&env, &env.current_contract_address(), &vault, &admin_fees)?;
 
         let mut total_balance = read_contract_balance(&env);
 

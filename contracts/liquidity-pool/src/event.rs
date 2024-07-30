@@ -9,8 +9,8 @@ pub fn lender_status_to_string(status: LenderStatus) -> &'static str {
     }
 }
 
-pub(crate) fn initialize(env: &Env, admin: Address, token: Address) {
-    let topics = (Symbol::new(env, "initialize"), admin, token);
+pub(crate) fn initialize(env: &Env, admin: Address, token: Address, vault: Address) {
+    let topics = (Symbol::new(env, "initialize"), admin, token, vault);
     env.events().publish(topics, ());
 }
 
