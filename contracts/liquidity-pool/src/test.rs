@@ -2,6 +2,7 @@
 extern crate std;
 
 use super::testutils::{create_token_contract, set_timestamp_for_20_days, Setup};
+use crate::types::LenderStatus;
 use soroban_sdk::{
     testutils::{Address as _, MockAuth, MockAuthInvoke},
     vec, Address, Env, IntoVal, Symbol,
@@ -2076,7 +2077,10 @@ fn test_set_lender_status() {
         .client()
         .set_lender_status(&lender, &false);
 
-    assert_eq!(setup.liquid_contract.read_lender_status(&lender), Ok(false));
+    assert_eq!(
+        setup.liquid_contract.read_lender_status(&lender),
+        Ok(LenderStatus::Disabled)
+    );
     let contract_events = setup.liquid_contract.get_contract_events();
 
     assert_eq!(
@@ -2111,7 +2115,7 @@ fn test_set_lender_status() {
                     setup.admin.into_val(&setup.env),
                     lender.into_val(&setup.env),
                 ],
-                (false).into_val(&setup.env)
+                ("disabled").into_val(&setup.env)
             )
         ]
     );

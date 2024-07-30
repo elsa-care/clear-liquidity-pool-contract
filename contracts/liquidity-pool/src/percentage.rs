@@ -2,6 +2,7 @@ use soroban_sdk::{Address, Env, Map, Vec};
 
 use crate::errors::LPError;
 use crate::storage::read_lender;
+use crate::types::LenderStatus;
 
 type ContributionsMap = Map<Address, i64>;
 type LenderAmountMap = Map<Address, i128>;
@@ -37,7 +38,7 @@ pub fn process_lender_contribution(
     for address in contributions.iter() {
         let lender = read_lender(env, &address)?;
 
-        if lender.active {
+        if lender.status == LenderStatus::Enabled {
             let percentage = calculate_percentage(&lender.balance, total_balance);
             let new_lender_amount =
                 calculate_new_lender_amount(loan_amount, &lender.balance, percentage);
