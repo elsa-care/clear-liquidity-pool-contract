@@ -3,7 +3,7 @@
 use crate::errors::LPError;
 use crate::storage::{
     has_borrower, has_lender, read_admin, read_borrower, read_contract_balance, read_contributions,
-    read_lender, read_loan, read_token,
+    read_lender, read_loan, read_token, read_vault,
 };
 use crate::types::{Borrower, DataKey, LenderStatus};
 use crate::LiquidityPoolContractClient;
@@ -26,11 +26,12 @@ pub fn create_test_contract(
     env: &Env,
     admin: &Address,
     token: &Address,
+    vault: &Address,
 ) -> (Address, LiquidityPoolContract) {
     let contract_id = register_test_contract(env);
     let contract = LiquidityPoolContract::new(env, contract_id.clone());
 
-    contract.client().initialize(admin, token);
+    contract.client().initialize(admin, token, vault);
 
     (contract_id, contract)
 }
@@ -53,6 +54,7 @@ pub fn create_token_contract<'a>(
 pub struct Setup<'a> {
     pub env: Env,
     pub admin: Address,
+    pub vault: Address,
     pub token: token::Client<'a>,
     pub token_admin: StellarAssetClient<'a>,
     pub liquid_contract: LiquidityPoolContract,
@@ -68,16 +70,18 @@ impl Setup<'_> {
     pub fn new() -> Self {
         let env = Env::default();
         let admin = Address::generate(&env);
+        let vault = Address::generate(&env);
         let token_admin = Address::generate(&env);
 
         let (token, token_admin) = create_token_contract(&env, &token_admin);
 
         let (liquid_contract_id, liquid_contract) =
-            create_test_contract(&env, &admin, &token.address);
+            create_test_contract(&env, &admin, &token.address, &vault);
 
         Self {
             env,
             admin,
+            vault,
             token,
             token_admin,
             liquid_contract,
@@ -143,6 +147,13 @@ impl LiquidityPoolContract {
         self.env.as_contract(&self.contract_id, || {
             let token = read_token(&self.env)?;
             Ok(token)
+        })
+    }
+
+    pub fn read_vault(&self) -> Result<Address, LPError> {
+        self.env.as_contract(&self.contract_id, || {
+            let vault = read_vault(&self.env)?;
+            Ok(vault)
         })
     }
 

@@ -76,6 +76,13 @@ pub fn read_token(env: &Env) -> Result<Address, LPError> {
     }
 }
 
+pub fn read_vault(env: &Env) -> Result<Address, LPError> {
+    match env.storage().persistent().get(&DataKey::Vault) {
+        Some(vault) => Ok(vault),
+        None => Err(LPError::VaultNotFound),
+    }
+}
+
 pub fn remove_borrower(env: &Env, borrower: &Address) {
     env.storage()
         .persistent()
@@ -144,4 +151,8 @@ pub fn write_lender_contribution(env: &Env, contributions: Vec<Address>) {
 
 pub fn write_token(env: &Env, address: &Address) {
     env.storage().persistent().set(&DataKey::Token, address);
+}
+
+pub fn write_vault(env: &Env, address: &Address) {
+    env.storage().persistent().set(&DataKey::Vault, address);
 }

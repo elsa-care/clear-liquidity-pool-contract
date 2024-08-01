@@ -40,6 +40,7 @@ pub enum DataKey {
     Token,
     Admin,
     Contribution,
+    Vault,
     Borrower(Address),
     Lender(Address),
     Loan(u64, Address),

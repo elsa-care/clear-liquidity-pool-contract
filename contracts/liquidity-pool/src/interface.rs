@@ -2,7 +2,7 @@ use crate::errors::LPError;
 use soroban_sdk::{Address, Env};
 
 pub trait LiquidityPoolTrait {
-    fn initialize(env: Env, admin: Address, token: Address) -> Result<(), LPError>;
+    fn initialize(env: Env, admin: Address, token: Address, vault: Address) -> Result<(), LPError>;
 
     fn balance(env: Env, lender: Address) -> Result<i128, LPError>;
 

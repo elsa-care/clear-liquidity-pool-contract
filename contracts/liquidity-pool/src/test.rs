@@ -19,6 +19,7 @@ fn test_initialize() {
         setup.liquid_contract.read_token(),
         Ok(setup.token.address.clone())
     );
+    assert_eq!(setup.liquid_contract.read_vault(), Ok(setup.vault.clone()));
     assert_eq!(
         contract_events,
         vec![
@@ -30,6 +31,7 @@ fn test_initialize() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             )
@@ -44,13 +46,14 @@ fn test_already_initialize() {
 
     let env = Env::default();
     let admin = Address::generate(&env);
+    let vault = Address::generate(&env);
     let token_admin = Address::generate(&env);
     let (token, _token_client) = create_token_contract(&env, &token_admin);
 
     setup
         .liquid_contract
         .client()
-        .initialize(&admin, &token.address);
+        .initialize(&admin, &token.address, &vault);
 }
 
 #[test]
@@ -143,6 +146,7 @@ fn test_deposit() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -308,6 +312,7 @@ fn test_withdraw() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -544,6 +549,7 @@ fn test_loan() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -763,6 +769,7 @@ fn test_request_two_loans() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -855,6 +862,7 @@ fn test_repay_loan_with_repayment_total_amount() {
     assert!(setup.liquid_contract.has_loan(&borrower, loan_id));
     assert_eq!(setup.liquid_contract.read_lender(&lender1), Ok(0i128));
     assert_eq!(setup.liquid_contract.read_lender(&lender2), Ok(0i128));
+    let vault_balance_after_repay_loan = setup.token.balance(&setup.vault);
 
     set_timestamp_for_20_days(&setup.env);
 
@@ -871,6 +879,7 @@ fn test_repay_loan_with_repayment_total_amount() {
     assert_eq!(setup.liquid_contract.read_lender(&lender1), Ok(5009i128));
     assert_eq!(setup.liquid_contract.read_lender(&lender2), Ok(5009i128));
     assert!(!setup.liquid_contract.has_loan(&borrower, loan_id));
+    assert!(vault_balance_after_repay_loan < setup.token.balance(&setup.vault));
     assert_eq!(
         contract_events,
         vec![
@@ -882,6 +891,7 @@ fn test_repay_loan_with_repayment_total_amount() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -1049,6 +1059,7 @@ fn test_repay_loan_without_repayment_total_amount() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -1365,6 +1376,7 @@ fn test_add_borrower() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -1483,6 +1495,7 @@ fn test_set_borrower_status() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -1589,6 +1602,7 @@ fn test_set_borrower_limits() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -1652,6 +1666,7 @@ fn test_set_borrower_limits_when_min_greater_than_max() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -1789,6 +1804,7 @@ fn test_remove_borrower() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -1892,6 +1908,7 @@ fn test_add_lender() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -1993,6 +2010,7 @@ fn test_remove_lender() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -2069,6 +2087,7 @@ fn test_remove_lender_with_pending_status() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -2183,6 +2202,7 @@ fn test_remove_lender_with_repay_loan() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
@@ -2323,6 +2343,7 @@ fn test_set_lender_status() {
                     *Symbol::new(&setup.env, "initialize").as_val(),
                     setup.admin.into_val(&setup.env),
                     setup.token.address.into_val(&setup.env),
+                    setup.vault.into_val(&setup.env)
                 ],
                 ().into_val(&setup.env)
             ),
