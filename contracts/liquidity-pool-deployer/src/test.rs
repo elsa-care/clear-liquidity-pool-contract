@@ -34,7 +34,7 @@ fn test_deploy_from_contract() {
     let (token, _token_client) = create_token_contract(&env, &token_admin);
 
     env.mock_all_auths();
-    let (contract_id, _contract) = deployer_client.deploy(&admin, &salt, &token.address, &vault);
+    let contract_id = deployer_client.deploy(&admin, &salt, &token.address, &vault);
 
     let client = liquidity_pool::Client::new(&env, &contract_id);
     let total_balance = client.balance(&admin);
