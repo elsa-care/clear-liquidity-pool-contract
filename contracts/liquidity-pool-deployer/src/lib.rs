@@ -19,7 +19,7 @@ impl LiquidityPoolDeployer {
         salt: BytesN<32>,
         token: Address,
         vault: Address,
-    ) -> (Address, Val) {
+    ) -> Address {
         if admin != env.current_contract_address() {
             admin.require_auth();
         }
@@ -30,13 +30,13 @@ impl LiquidityPoolDeployer {
 
         let init_args = (admin, token, vault).into_val(&env);
 
-        let contract: Val = env.invoke_contract(
+        let _contract: Val = env.invoke_contract(
             &deployed_address,
             &Symbol::new(&env, "initialize"),
             init_args,
         );
 
-        (deployed_address, contract)
+        deployed_address
     }
 }
 

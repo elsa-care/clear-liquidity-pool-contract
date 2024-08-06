@@ -7,7 +7,7 @@ NETWORK="$1"
 WASM_PATH="target/wasm32-unknown-unknown/release/"
 CLEAR_WASM=$WASM_PATH"liquidity_pool"
 DEPLOYER_WASM=$WASM_PATH"liquidity_pool_deployer"
-TOKEN_NATIVE_ID="CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
+TOKEN_ID="CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
 
 case "$1" in
 standalone)
@@ -68,4 +68,25 @@ CONTRACT_DEPLOYER_ID="$(
 )"
 echo "Contract deployed successfully with ID: $CONTRACT_DEPLOYER_ID"
 
+echo Generate Vault Address
+  stellar keys generate vault --network $NETWORK
+  VAULT_ADDRESS="$(soroban keys address vault)"
+echo "Vault Address: $VAULT_ADDRESS"
+
+echo Install Clear Liquidity Pool Contract
+SALT="$(
+  stellar contract install --wasm $CLEAR_WASM".optimized.wasm" $ARGS
+)"
+
+echo Initialize Clear Liquidity Pool Contract
+CLEAR_CONTRACT="$(
+  stellar contract invoke --id $CONTRACT_DEPLOYER_ID $ARGS \
+   -- deploy \
+   --admin $CLEAR_ADMIN_ADDRESS \
+   --salt $SALT \
+   --token $TOKEN_ID \
+   --vault $VAULT_ADDRESS
+)"
+
+echo "Clear contract deployed successfully: $CLEAR_CONTRACT"
 echo "Done"
