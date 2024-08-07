@@ -11,7 +11,7 @@ mod types;
 
 use crate::errors::LPError;
 use crate::interface::LiquidityPoolTrait;
-use crate::operations::{addition, subtraction};
+use crate::operations::{subtract, sum};
 use crate::percentage::{calculate_fees, calculate_repayment_amount, process_lender_contribution};
 use crate::storage::{
     check_admin, has_admin, has_borrower, has_lender, read_admin, read_borrower,
@@ -95,8 +95,8 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
 
         let mut total_balance = read_contract_balance(&env);
 
-        total_balance = addition(&total_balance, &amount)?;
-        lender.balance = addition(&lender.balance, &amount)?;
+        total_balance = sum(&total_balance, &amount)?;
+        lender.balance = sum(&lender.balance, &amount)?;
 
         token_transfer(&env, &address, &env.current_contract_address(), &amount)?;
 
@@ -134,8 +134,8 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BalanceNotAvailableForAmountRequested);
         }
 
-        total_balance = subtraction(&total_balance, &amount)?;
-        lender.balance = subtraction(&lender.balance, &amount)?;
+        total_balance = subtract(&total_balance, &amount)?;
+        lender.balance = subtract(&lender.balance, &amount)?;
 
         token_transfer(&env, &env.current_contract_address(), &address, &amount)?;
 
@@ -179,7 +179,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         let lender_contributions =
             process_lender_contribution(&env, lenders.clone(), &amount, &total_balance)?;
 
-        total_balance = subtraction(&total_balance, &amount)?;
+        total_balance = subtract(&total_balance, &amount)?;
 
         let loan_id = env.prng().gen();
         let new_loan = Loan {
@@ -211,14 +211,14 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         let vault = read_vault(&env)?;
         let total_fees = calculate_fees(&env, &loan)?;
         let admin_fees = total_fees / 10;
-        let mut amount_for_lenders = subtraction(&amount, &admin_fees)?;
+        let mut amount_for_lenders = subtract(&amount, &admin_fees)?;
 
         let mut total_balance = read_contract_balance(&env);
 
         for (address, percentage) in loan.contributions.iter() {
             let mut lender = read_lender(&env, &address)?;
-            lender.active_loans = subtraction(&lender.active_loans, &1)?;
-            lender.balance = addition(
+            lender.active_loans = subtract(&lender.active_loans, &1)?;
+            lender.balance = sum(
                 &lender.balance,
                 &(calculate_repayment_amount(amount_for_lenders, percentage)?),
             )?;
@@ -231,16 +231,16 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
                     &lender.balance,
                 )?;
 
-                amount_for_lenders = subtraction(&amount_for_lenders, &lender.balance)?;
+                amount_for_lenders = subtract(&amount_for_lenders, &lender.balance)?;
                 remove_lender(&env, &address);
             } else {
                 write_lender(&env, &address, &lender);
             }
         }
 
-        let repay_loan_amount = addition(&loan.amount, &(calculate_fees(&env, &loan)?))?;
-        let repay_amount_diff = subtraction(&repay_loan_amount, &amount)?;
-        total_balance = addition(&total_balance, &amount_for_lenders)?;
+        let repay_loan_amount = sum(&loan.amount, &(calculate_fees(&env, &loan)?))?;
+        let repay_amount_diff = subtract(&repay_loan_amount, &amount)?;
+        total_balance = sum(&total_balance, &amount_for_lenders)?;
 
         token_transfer(&env, &borrower, &env.current_contract_address(), &amount)?;
         token_transfer(&env, &env.current_contract_address(), &vault, &admin_fees)?;
@@ -266,7 +266,7 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         }
 
         let loan = read_loan(&env, &borrower, &loan_id)?;
-        let loan_amount = addition(&loan.amount, &calculate_fees(&env, &loan)?)?;
+        let loan_amount = sum(&loan.amount, &calculate_fees(&env, &loan)?)?;
 
         Ok(loan_amount)
     }
@@ -444,8 +444,8 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BalanceNotAvailableForAmountRequested);
         }
 
-        total_balance = subtraction(&total_balance, &lender.balance)?;
-        lender.balance = subtraction(&lender.balance, &lender.balance)?;
+        total_balance = subtract(&total_balance, &lender.balance)?;
+        lender.balance = subtract(&lender.balance, &lender.balance)?;
 
         token_transfer(
             &env,
