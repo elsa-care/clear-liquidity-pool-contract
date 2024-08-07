@@ -3,6 +3,7 @@
 mod errors;
 mod event;
 mod interface;
+mod operations;
 mod percentage;
 mod storage;
 mod testutils;
@@ -10,7 +11,8 @@ mod types;
 
 use crate::errors::LPError;
 use crate::interface::LiquidityPoolTrait;
-use crate::percentage::{calculate_repayment_amount, process_lender_contribution};
+use crate::operations::{subtract, sum};
+use crate::percentage::{calculate_fees, calculate_repayment_amount, process_lender_contribution};
 use crate::storage::{
     check_admin, has_admin, has_borrower, has_lender, read_admin, read_borrower,
     read_contract_balance, read_contributions, read_lender, read_loan, read_token, read_vault,
@@ -19,11 +21,10 @@ use crate::storage::{
     write_token, write_vault,
 };
 use crate::types::{Borrower, Lender, LenderStatus, Loan};
-
 use soroban_sdk::{
     contract, contractimpl, contractmeta,
     token::{self},
-    Address, Env, Map, Vec,
+    Address, Env,
 };
 
 fn token_transfer(env: &Env, from: &Address, to: &Address, amount: &i128) -> Result<(), LPError> {
@@ -33,47 +34,11 @@ fn token_transfer(env: &Env, from: &Address, to: &Address, amount: &i128) -> Res
     Ok(())
 }
 
-fn calculate_fees(env: &Env, loan: &Loan) -> i128 {
-    let now_ledger = env.ledger().timestamp();
-    let start_time = loan.start_time;
-    let interest_rate_per_day = 10;
-    let seconds_per_day = 86400;
-
-    let duration_days = (now_ledger - start_time) / seconds_per_day;
-
-    loan.amount * (interest_rate_per_day * duration_days) as i128 / 100_000
-}
-
 fn check_nonnegative_amount(amount: i128) -> Result<(), LPError> {
     if amount < 0 {
         return Err(LPError::AmountMustBePositive);
     }
 
-    Ok(())
-}
-
-fn update_lender_balances(
-    env: &Env,
-    lenders: Vec<Address>,
-    new_lender_amounts: Map<Address, i128>,
-) -> Result<(), LPError> {
-    for address in lenders.iter() {
-        match new_lender_amounts.try_get(address.clone()) {
-            Ok(Some(new_lender_balance)) => {
-                let mut lender = read_lender(env, &address)?;
-                lender.balance = new_lender_balance;
-                lender.active_loans += 1;
-
-                write_lender(env, &address, &lender);
-            }
-            Ok(None) => {
-                return Err(LPError::LenderNotFoundInContributions);
-            }
-            Err(_) => {
-                return Err(LPError::LenderNotFoundInContributions);
-            }
-        }
-    }
     Ok(())
 }
 
@@ -128,12 +93,12 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::LenderDisabled);
         };
 
-        token_transfer(&env, &address, &env.current_contract_address(), &amount)?;
-
         let mut total_balance = read_contract_balance(&env);
 
-        total_balance += amount;
-        lender.balance += amount;
+        total_balance = sum(&total_balance, &amount)?;
+        lender.balance = sum(&lender.balance, &amount)?;
+
+        token_transfer(&env, &address, &env.current_contract_address(), &amount)?;
 
         write_contract_balance(&env, &total_balance);
         write_lender(&env, &address, &lender);
@@ -169,10 +134,10 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BalanceNotAvailableForAmountRequested);
         }
 
-        token_transfer(&env, &env.current_contract_address(), &address, &amount)?;
+        total_balance = subtract(&total_balance, &amount)?;
+        lender.balance = subtract(&lender.balance, &amount)?;
 
-        total_balance -= amount;
-        lender.balance -= amount;
+        token_transfer(&env, &env.current_contract_address(), &address, &amount)?;
 
         write_contract_balance(&env, &total_balance);
         write_lender(&env, &address, &lender);
@@ -203,18 +168,18 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::LoanAmountOutsideWithdrawalLimits);
         }
 
-        let total_balance = read_contract_balance(&env);
+        let mut total_balance = read_contract_balance(&env);
 
         if amount > total_balance {
             return Err(LPError::BalanceNotAvailableForAmountRequested);
         }
 
-        token_transfer(&env, &env.current_contract_address(), &address, &amount)?;
-
         let lenders = read_contributions(&env);
 
-        let (lender_contributions, new_lender_amounts) =
+        let lender_contributions =
             process_lender_contribution(&env, lenders.clone(), &amount, &total_balance)?;
+
+        total_balance = subtract(&total_balance, &amount)?;
 
         let loan_id = env.prng().gen();
         let new_loan = Loan {
@@ -223,8 +188,9 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             contributions: lender_contributions,
         };
 
-        update_lender_balances(&env, lenders, new_lender_amounts)?;
-        write_contract_balance(&env, &(total_balance - amount));
+        token_transfer(&env, &env.current_contract_address(), &address, &amount)?;
+
+        write_contract_balance(&env, &total_balance);
         write_loan(&env, &address, &loan_id, &new_loan);
 
         event::loan(&env, address, loan_id, amount);
@@ -243,19 +209,19 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         let mut loan = read_loan(&env, &borrower, &loan_id)?;
 
         let vault = read_vault(&env)?;
-        let total_fees = calculate_fees(&env, &loan);
+        let total_fees = calculate_fees(&env, &loan)?;
         let admin_fees = total_fees / 10;
-        let mut amount_for_lenders = amount - admin_fees;
-
-        token_transfer(&env, &borrower, &env.current_contract_address(), &amount)?;
-        token_transfer(&env, &env.current_contract_address(), &vault, &admin_fees)?;
+        let mut amount_for_lenders = subtract(&amount, &admin_fees)?;
 
         let mut total_balance = read_contract_balance(&env);
 
         for (address, percentage) in loan.contributions.iter() {
             let mut lender = read_lender(&env, &address)?;
-            lender.active_loans -= 1;
-            lender.balance += calculate_repayment_amount(amount_for_lenders, percentage);
+            lender.active_loans = subtract(&lender.active_loans, &1)?;
+            lender.balance = sum(
+                &lender.balance,
+                &(calculate_repayment_amount(amount_for_lenders, percentage)?),
+            )?;
 
             if lender.active_loans == 0 && lender.status == LenderStatus::PendingRemoval {
                 token_transfer(
@@ -265,18 +231,22 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
                     &lender.balance,
                 )?;
 
-                amount_for_lenders -= lender.balance;
+                amount_for_lenders = subtract(&amount_for_lenders, &lender.balance)?;
                 remove_lender(&env, &address);
             } else {
                 write_lender(&env, &address, &lender);
             }
         }
 
-        let repay_loan_amount = loan.amount + calculate_fees(&env, &loan);
-        total_balance += amount_for_lenders;
+        let repay_loan_amount = sum(&loan.amount, &(calculate_fees(&env, &loan)?))?;
+        let repay_amount_diff = subtract(&repay_loan_amount, &amount)?;
+        total_balance = sum(&total_balance, &amount_for_lenders)?;
 
-        if (repay_loan_amount - amount) > 0 {
-            loan.amount = repay_loan_amount - amount;
+        token_transfer(&env, &borrower, &env.current_contract_address(), &amount)?;
+        token_transfer(&env, &env.current_contract_address(), &vault, &admin_fees)?;
+
+        if repay_amount_diff > 0 {
+            loan.amount = repay_amount_diff;
             write_loan(&env, &borrower, &loan_id, &loan);
         } else {
             remove_loan(&env, &borrower, &loan_id);
@@ -296,8 +266,9 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
         }
 
         let loan = read_loan(&env, &borrower, &loan_id)?;
+        let loan_amount = sum(&loan.amount, &calculate_fees(&env, &loan)?)?;
 
-        Ok(loan.amount + calculate_fees(&env, &loan))
+        Ok(loan_amount)
     }
 
     fn get_loan_withdraw_limit(env: Env, address: Address) -> Result<(i128, i128), LPError> {
@@ -473,14 +444,15 @@ impl LiquidityPoolTrait for LiquidityPoolContract {
             return Err(LPError::BalanceNotAvailableForAmountRequested);
         }
 
+        total_balance = subtract(&total_balance, &lender.balance)?;
+        lender.balance = subtract(&lender.balance, &lender.balance)?;
+
         token_transfer(
             &env,
             &env.current_contract_address(),
             &address,
             &lender.balance,
         )?;
-
-        total_balance -= lender.balance;
 
         if lender.active_loans > 0 {
             lender.status = LenderStatus::PendingRemoval;
